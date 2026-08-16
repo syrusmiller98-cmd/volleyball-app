@@ -1,0 +1,1866 @@
+<!DOCTYPE html>
+<html lang="ja" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>バレーボール試合記録システム</title>
+    <style>
+        /* CSS変数によるテーマ統一管理 */
+        :root[data-theme="dark"] {
+            --bg-main: #0f172a;
+            --bg-card: #1e293b;
+            --bg-input: #0f172a;
+            --bg-chip: #1e293b;
+            --text-main: #f8fafc;
+            --text-muted: #94a3b8;
+            --border: #334155;
+            --primary: #3b82f6;
+            --primary-hover: #2563eb;
+            --primary-light: rgba(59, 130, 246, 0.15);
+            --danger: #ef4444;
+            --danger-hover: #dc2626;
+            --danger-light: rgba(239, 68, 68, 0.15);
+            --success: #10b981;
+            --warning: #f59e0b;
+            --purple: #8b5cf6;
+            --team-my: #2563eb;
+            --team-opp: #dc2626;
+        }
+
+        :root[data-theme="light"] {
+            --bg-main: #f8fafc;
+            --bg-card: #ffffff;
+            --bg-input: #f1f5f9;
+            --bg-chip: #f1f5f9;
+            --text-main: #0f172a;
+            --text-muted: #64748b;
+            --border: #e2e8f0;
+            --primary: #2563eb;
+            --primary-hover: #1d4ed8;
+            --primary-light: rgba(37, 99, 235, 0.1);
+            --danger: #dc2626;
+            --danger-hover: #b91c1c;
+            --danger-light: rgba(220, 38, 38, 0.1);
+            --success: #059669;
+            --warning: #d97706;
+            --purple: #7c3aed;
+            --team-my: #2563eb;
+            --team-opp: #dc2626;
+        }
+
+        * {
+            box-sizing: border-box;
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        body {
+            max-width: 500px;
+            margin: 0 auto;
+            padding-top: 88px;
+            padding-bottom: 70px;
+            background-color: var(--bg-main);
+            color: var(--text-main);
+            transition: background-color 0.2s, color 0.2s;
+        }
+
+        /* 固定ヘッダー */
+        .fixed-header {
+            position: fixed;
+            top: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 100%;
+            max-width: 500px;
+            background: var(--bg-card);
+            color: var(--text-main);
+            padding: 6px 12px 8px 12px;
+            border-bottom: 1px solid var(--border);
+            z-index: 1000;
+            transition: background 0.2s, border-color 0.2s;
+        }
+
+        .header-top-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.72rem;
+            color: var(--text-muted);
+            margin-bottom: 4px;
+        }
+
+        .status-badge {
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 0.68rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .status-badge.online {
+            background: rgba(16, 185, 129, 0.15);
+            color: var(--success);
+            border: 1px solid var(--success);
+        }
+
+        .status-badge.connecting {
+            background: var(--primary-light);
+            color: var(--primary);
+            border: 1px solid var(--primary);
+        }
+
+        .status-badge.offline {
+            background: var(--danger-light);
+            color: var(--danger);
+            border: 1px solid var(--danger);
+        }
+
+        .btn-share-link {
+            background: var(--bg-chip);
+            color: var(--text-main);
+            border: 1px solid var(--border);
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 0.68rem;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 2px;
+        }
+
+        .header-match-info {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .score-board {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            background: var(--bg-main);
+            padding: 4px 8px;
+            border-radius: 10px;
+            border: 1px solid var(--border);
+            width: 100%;
+            justify-content: space-between;
+        }
+
+        .score-team-box {
+            display: flex;
+            align-items: center;
+            gap: 4px;
+            padding: 2px 4px;
+            border-radius: 6px;
+        }
+
+        .score-team-box.opp { background: rgba(220, 38, 38, 0.1); }
+        .score-team-box.my { background: rgba(37, 99, 235, 0.1); }
+
+        .team-tag {
+            font-weight: 700;
+            font-size: 0.78rem;
+            padding: 2px 6px;
+            border-radius: 4px;
+            color: #ffffff;
+            max-width: 60px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .team-tag.opp { background: var(--team-opp); }
+        .team-tag.my { background: var(--team-my); }
+
+        .score-num {
+            font-size: 1.3rem;
+            font-weight: 700;
+            min-width: 24px;
+            text-align: center;
+            margin: 0 2px;
+        }
+
+        .score-num.opp { color: var(--team-opp); }
+        .score-num.my { color: var(--team-my); }
+
+        .set-select {
+            background: var(--bg-card);
+            color: var(--primary);
+            border: 1px solid var(--border);
+            padding: 4px 6px;
+            border-radius: 6px;
+            font-size: 0.78rem;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .score-btn {
+            color: #ffffff;
+            border: none;
+            width: 26px;
+            height: 26px;
+            border-radius: 6px;
+            font-size: 0.9rem;
+            font-weight: 700;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: opacity 0.15s;
+        }
+
+        .score-btn.opp { background: var(--team-opp); }
+        .score-btn.my { background: var(--team-my); }
+        .score-btn:active { opacity: 0.8; }
+
+        .theme-toggle-btn {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            color: var(--text-main);
+            width: 28px;
+            height: 28px;
+            border-radius: 6px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+        }
+
+        /* ボトムナビゲーション */
+        .bottom-nav {
+            position: fixed;
+            bottom: 0;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 100%;
+            max-width: 500px;
+            background: var(--bg-card);
+            border-top: 1px solid var(--border);
+            display: flex;
+            justify-content: space-around;
+            padding: 6px 0;
+            z-index: 1000;
+            transition: background 0.2s, border-color 0.2s;
+        }
+
+        .nav-item {
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            cursor: pointer;
+            background: none;
+            border: none;
+            gap: 2px;
+        }
+
+        .nav-item.active { color: var(--primary); }
+
+        .nav-icon {
+            width: 18px;
+            height: 18px;
+            fill: none;
+            stroke: currentColor;
+            stroke-width: 2;
+            stroke-linecap: round;
+            stroke-linejoin: round;
+        }
+
+        /* セクションカード */
+        .card-section { padding: 10px 14px; }
+
+        .section-title {
+            font-size: 0.8rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            margin-bottom: 6px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .step-badge {
+            font-size: 0.7rem;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-weight: 600;
+            background: var(--bg-chip);
+            color: var(--text-muted);
+            border: 1px solid var(--border);
+        }
+
+        .step-badge.active {
+            background: var(--primary);
+            color: #ffffff;
+            border-color: var(--primary);
+        }
+
+        /* 試合カード＆フォーム */
+        .match-create-box {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 10px;
+            margin-bottom: 8px;
+            display: flex;
+            flex-direction: column;
+            gap: 6px;
+        }
+
+        .match-input-row {
+            display: flex;
+            gap: 6px;
+        }
+
+        .text-input {
+            flex: 1;
+            padding: 6px 8px;
+            background: var(--bg-input);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            color: var(--text-main);
+            font-size: 0.8rem;
+        }
+
+        .btn-action-small {
+            background-color: var(--primary);
+            color: #ffffff;
+            border: none;
+            padding: 6px 10px;
+            font-size: 0.78rem;
+            font-weight: 600;
+            border-radius: 6px;
+            cursor: pointer;
+            white-space: nowrap;
+        }
+
+        .match-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 10px;
+            margin-bottom: 6px;
+            transition: border-color 0.2s;
+            cursor: pointer;
+        }
+
+        .match-card.selected-match {
+            border: 2px solid var(--primary);
+        }
+
+        .match-title {
+            font-size: 0.95rem;
+            font-weight: 700;
+            color: var(--text-main);
+        }
+
+        .match-meta {
+            font-size: 0.72rem;
+            color: var(--text-muted);
+        }
+
+        .match-scores-history {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            margin-top: 4px;
+        }
+
+        .btn-delete-small {
+            background-color: var(--danger-light);
+            color: var(--danger);
+            border: 1px solid var(--danger);
+            padding: 2px 6px;
+            font-size: 0.7rem;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        /* 選手チップ */
+        .player-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 6px;
+        }
+
+        .player-chip {
+            padding: 6px 12px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            border-radius: 8px;
+            background-color: var(--bg-chip);
+            color: var(--text-main);
+            border: 1px solid var(--border);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            transition: all 0.15s ease;
+        }
+
+        .player-chip .num {
+            color: var(--text-muted);
+            font-size: 0.75rem;
+        }
+
+        .player-chip.selected {
+            background-color: var(--primary);
+            color: #ffffff;
+            border-color: var(--primary);
+        }
+
+        .player-chip.selected .num { color: rgba(255, 255, 255, 0.8); }
+
+        .chip-del-btn {
+            color: var(--danger);
+            background: none;
+            border: none;
+            font-size: 0.8rem;
+            font-weight: bold;
+            margin-left: 4px;
+            cursor: pointer;
+        }
+
+        /* プレー選択ボタン */
+        .btn-grid-5 {
+            display: grid;
+            grid-template-columns: repeat(5, 1fr);
+            gap: 6px;
+        }
+
+        button.action-btn {
+            height: 44px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            color: var(--text-muted);
+            background: var(--bg-card);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.15s ease;
+        }
+
+        button.action-btn.active-play {
+            background: var(--primary);
+            color: #ffffff;
+            border-color: var(--primary);
+        }
+
+        button.action-btn:disabled {
+            background-color: var(--bg-main);
+            color: var(--text-muted);
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .guide-text {
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 0.8rem;
+            margin-top: 10px;
+        }
+
+        /* 結果選択エリア（塗りつぶし） */
+        .result-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 6px;
+            margin-top: 8px;
+        }
+
+        .btn-result {
+            height: 44px;
+            font-size: 0.85rem;
+            font-weight: 700;
+            border: none;
+            border-radius: 8px;
+            color: #ffffff;
+            cursor: pointer;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
+            transition: transform 0.08s, opacity 0.15s;
+        }
+
+        .btn-result:active {
+            transform: scale(0.96);
+            opacity: 0.85;
+        }
+
+        .btn-result.btn-success { background-color: var(--success); }
+        .btn-result.btn-miss { background-color: var(--danger); }
+        .btn-result.btn-info { background-color: var(--primary); }
+        .btn-result.btn-warning { background-color: var(--warning); color: #000; }
+        .btn-result.btn-purple { background-color: var(--purple); }
+
+        /* 選手登録カード */
+        .register-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 10px;
+            margin-bottom: 10px;
+        }
+
+        .register-form {
+            display: flex;
+            gap: 6px;
+            margin-bottom: 8px;
+        }
+
+        .num-input {
+            width: 50px;
+            padding: 6px;
+            background: var(--bg-input);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            color: var(--text-main);
+            text-align: center;
+            font-weight: 600;
+        }
+
+        .name-input {
+            flex: 1;
+            padding: 6px;
+            background: var(--bg-input);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            color: var(--text-main);
+        }
+
+        /* 集計グリッド */
+        .stats-grid-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+        }
+
+        .stat-card {
+            background: var(--bg-card);
+            border-radius: 10px;
+            padding: 10px;
+            border: 1px solid var(--border);
+        }
+
+        .stat-card-title {
+            font-size: 0.75rem;
+            font-weight: 600;
+            color: var(--text-muted);
+            margin-bottom: 6px;
+        }
+
+        .stat-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 4px;
+            font-size: 0.8rem;
+            color: var(--text-main);
+        }
+
+        .stat-val {
+            font-size: 1.1rem;
+            font-weight: 700;
+        }
+
+        .stat-val.primary { color: var(--primary); }
+        .stat-val.success { color: var(--success); }
+        .stat-val.danger { color: var(--danger); }
+
+        .set-tabs {
+            display: flex;
+            gap: 2px;
+            background: var(--bg-main);
+            padding: 2px;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+        }
+
+        .set-tab-btn {
+            padding: 3px 8px;
+            font-size: 0.7rem;
+            font-weight: 600;
+            border: none;
+            border-radius: 6px;
+            background: none;
+            color: var(--text-muted);
+            cursor: pointer;
+        }
+
+        .set-tab-btn.active {
+            background: var(--primary);
+            color: #ffffff;
+        }
+
+        .player-select-dropdown {
+            background: var(--bg-card);
+            color: var(--primary);
+            border: 1px solid var(--border);
+            padding: 4px 8px;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            cursor: pointer;
+            max-width: 160px;
+        }
+
+        .log-container {
+            max-height: 160px;
+            overflow-y: auto;
+            background: var(--bg-card);
+            border-radius: 8px;
+            padding: 6px;
+            border: 1px solid var(--border);
+        }
+
+        .log-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 6px 4px;
+            border-bottom: 1px solid var(--border);
+            font-size: 0.8rem;
+        }
+
+        .log-item:last-child { border-bottom: none; }
+
+        .btn-export {
+            background-color: var(--primary);
+            width: 100%;
+            padding: 10px;
+            font-size: 0.85rem;
+            font-weight: 600;
+            border: none;
+            border-radius: 8px;
+            color: white;
+            cursor: pointer;
+            margin-top: 8px;
+        }
+
+        .btn-reset-danger {
+            background-color: var(--danger-light);
+            color: var(--danger);
+            border: 1px solid var(--danger);
+            width: 100%;
+            padding: 8px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            border-radius: 8px;
+            cursor: pointer;
+            margin-top: 6px;
+        }
+
+        .toast-undo {
+            background: var(--bg-card);
+            color: var(--text-main);
+            padding: 8px 12px;
+            border-radius: 8px;
+            margin: 8px 14px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.8rem;
+            border: 1px solid var(--border);
+        }
+
+        .btn-undo {
+            background: var(--danger);
+            color: white;
+            border: none;
+            padding: 4px 10px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            border-radius: 4px;
+            cursor: pointer;
+        }
+
+        .empty-notice {
+            text-align: center;
+            color: var(--text-muted);
+            font-size: 0.8rem;
+            padding: 12px;
+            background: var(--bg-card);
+            border-radius: 8px;
+            border: 1px dashed var(--border);
+        }
+
+        #copy-textarea {
+            position: absolute;
+            left: -9999px;
+            top: 0;
+        }
+    </style>
+
+    <!-- 全面クラウド同期（Firebase Firestore）ES Module -->
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInWithCustomToken, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        // アプリID ＆ Firebase設定の取得
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'vball-realtime-app';
+        let firebaseConfig = null;
+
+        try {
+            if (typeof __firebase_config !== 'undefined' && __firebase_config) {
+                firebaseConfig = typeof __firebase_config === 'string' ? JSON.parse(__firebase_config) : __firebase_config;
+            }
+        } catch (e) {
+            console.error("Firebase config parse error:", e);
+        }
+
+        // 設定フォールバック（プレビューテスト用）
+        if (!firebaseConfig || !firebaseConfig.projectId) {
+            firebaseConfig = {
+                apiKey: "AIzaSyDemoConfigKeyForVolleyballApp123",
+                authDomain: "demo-vball-app.firebaseapp.com",
+                projectId: "demo-vball-app",
+                storageBucket: "demo-vball-app.appspot.com",
+                messagingSenderId: "123456789012",
+                appId: "1:123456789012:web:demo123456789"
+            };
+        }
+
+        // ルームID（URLパラメータ `?room=xxx` から取得、無ければ自動生成）
+        function getRoomId() {
+            const urlParams = new URLSearchParams(window.location.search);
+            let room = urlParams.get('room');
+            if (!room) {
+                room = Math.random().toString(36).substring(2, 8);
+                const newUrl = window.location.protocol + "//" + window.location.host + window.location.pathname + '?room=' + room;
+                window.history.replaceState({ path: newUrl }, '', newUrl);
+            }
+            return room;
+        }
+
+        const roomId = getRoomId();
+        let app, auth, db, user;
+
+        // デフォルト選手リスト
+        const defaultPlayers = [
+            { num: "1", name: "山田 太郎" },
+            { num: "5", name: "鈴木 健太" },
+            { num: "7", name: "田中 涼" },
+            { num: "10", name: "佐藤 大輝" },
+            { num: "14", name: "中村 蓮" },
+            { num: "3", name: "伊藤 翔" }
+        ];
+
+        // グローバル単一状態（Single Source of Truth）
+        window.appState = {
+            matches: [],
+            logs: [],
+            players: defaultPlayers,
+            currentMatchId: null
+        };
+
+        let isSelfUpdating = false;
+
+        // 初期化 ＆ クラウド同期リスナー構築
+        async function initSyncSystem() {
+            const statusBadge = document.getElementById('status-badge-text');
+            if (statusBadge) {
+                statusBadge.innerText = '⏳ 接続中...';
+                statusBadge.className = 'status-badge connecting';
+            }
+
+            try {
+                app = initializeApp(firebaseConfig);
+                auth = getAuth(app);
+                db = getFirestore(app);
+
+                // RULE 3: 認証手続きを完了させる
+                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                    await signInWithCustomToken(auth, __initial_auth_token);
+                } else {
+                    await signInAnonymously(auth);
+                }
+
+                user = auth.currentUser;
+                if (!user) throw new Error("認証失敗");
+
+                if (statusBadge) {
+                    statusBadge.innerText = `🟢 リアルタイム共有中 (${roomId})`;
+                    statusBadge.className = 'status-badge online';
+                }
+
+                // RULE 1: 正しいパス構造 (/artifacts/{appId}/public/data/rooms/{roomId})
+                const roomDocRef = doc(db, 'artifacts', appId, 'public', 'data', 'rooms', roomId);
+
+                // クラウドの変更を常時リアルタイム監視
+                onSnapshot(roomDocRef, (docSnap) => {
+                    if (isSelfUpdating) {
+                        isSelfUpdating = false;
+                        return;
+                    }
+
+                    if (docSnap.exists()) {
+                        const remoteData = docSnap.data();
+                        if (remoteData && remoteData.state) {
+                            window.appState = remoteData.state;
+                            if (!window.appState.players || window.appState.players.length === 0) {
+                                window.appState.players = defaultPlayers;
+                            }
+                            // 他端末からの更新を即時に画面全体へ反映！
+                            window.renderAllUI();
+                        }
+                    } else {
+                        // 初回作成時
+                        window.saveStateToCloud();
+                    }
+                }, (err) => {
+                    console.error("onSnapshot error:", err);
+                    if (statusBadge) {
+                        statusBadge.innerText = `📱 ローカルモード (${roomId})`;
+                        statusBadge.className = 'status-badge offline';
+                    }
+                });
+
+            } catch (err) {
+                console.warn("Firebase Init fallback:", err);
+                if (statusBadge) {
+                    statusBadge.innerText = `📱 ローカルモード (${roomId})`;
+                    statusBadge.className = 'status-badge offline';
+                }
+            }
+        }
+
+        // クラウドへ状態を即座に保存・配信
+        window.saveStateToCloud = async function() {
+            if (!db || !user) return;
+            try {
+                isSelfUpdating = true;
+                const roomDocRef = doc(db, 'artifacts', appId, 'public', 'data', 'rooms', roomId);
+                await setDoc(roomDocRef, {
+                    state: window.appState,
+                    updatedAt: Date.now(),
+                    updatedBy: user.uid
+                }, { merge: true });
+            } catch (err) {
+                console.error("クラウド保存エラー:", err);
+            }
+        };
+
+        window.initSyncSystem = initSyncSystem;
+    </script>
+</head>
+<body>
+
+    <!-- 1. 最上部固定ヘッダー -->
+    <div class="fixed-header">
+        <div class="header-top-row">
+            <span id="header-date">----/--/-- --:--</span>
+            <div style="display:flex; gap:6px; align-items:center;">
+                <span class="status-badge connecting" id="status-badge-text">⏳ 接続中...</span>
+                <button class="btn-share-link" onclick="copyShareUrl()" title="このURLを他の端末で開くと自動でリアルタイム共有されます">🔗 共有リンク</button>
+            </div>
+        </div>
+        <div class="header-match-info">
+            <div class="score-board">
+                <!-- 相手チーム (左) -->
+                <div class="score-team-box opp">
+                    <span class="team-tag opp" id="header-opp-tag">相手</span>
+                    <button class="score-btn opp" onclick="updateScore('opp', -1)">-</button>
+                    <span class="score-num opp" id="header-opp-score">0</span>
+                    <button class="score-btn opp" onclick="updateScore('opp', 1)">+</button>
+                </div>
+
+                <!-- 自分チーム (右) -->
+                <div class="score-team-box my">
+                    <button class="score-btn my" onclick="updateScore('my', -1)">-</button>
+                    <span class="score-num my" id="header-my-score">0</span>
+                    <button class="score-btn my" onclick="updateScore('my', 1)">+</button>
+                    <span class="team-tag my">自</span>
+                </div>
+
+                <!-- セット切替 -->
+                <select id="header-set-select" class="set-select" onchange="onChangeCurrentSet()">
+                    <option value="1">S1</option>
+                    <option value="2">S2</option>
+                    <option value="3" selected>S3</option>
+                    <option value="4">S4</option>
+                    <option value="5">S5</option>
+                </select>
+
+                <!-- テーマ切替ボタン -->
+                <button class="theme-toggle-btn" onclick="toggleTheme()" title="テーマ切替">
+                    <svg style="width:16px; height:16px; fill:none; stroke:currentColor; stroke-width:2;" id="theme-icon" viewBox="0 0 24 24">
+                        <circle cx="12" cy="12" r="5"></circle>
+                        <line x1="12" y1="1" x2="12" y2="3"></line>
+                        <line x1="12" y1="21" x2="12" y2="23"></line>
+                        <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                        <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                        <line x1="1" y1="12" x2="3" y2="12"></line>
+                        <line x1="21" y1="12" x2="23" y2="12"></line>
+                        <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+                        <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+                    </svg>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 2. タブ1: 記録画面 -->
+    <div id="tab1-view">
+        <!-- 試合作成・選択 -->
+        <div class="card-section">
+            <div class="section-title">
+                <span>1. 試合を選択</span>
+                <span class="step-badge" id="tag-step1">要選択</span>
+            </div>
+
+            <!-- 新規試合作成フォーム -->
+            <div class="match-create-box">
+                <div class="match-input-row">
+                    <input type="text" id="new-opponent" class="text-input" placeholder="対戦相手 (例: 東京第一高校)" />
+                    <button class="btn-action-small" onclick="handleCreateMatch()">＋ 試合作成</button>
+                </div>
+                <div class="match-input-row">
+                    <input type="date" id="new-date" class="text-input" />
+                    <input type="time" id="new-time" class="text-input" />
+                </div>
+            </div>
+
+            <!-- 試合一覧カードリスト -->
+            <div id="match-cards-list"></div>
+        </div>
+
+        <!-- 選手選択 -->
+        <div class="card-section">
+            <div class="section-title">
+                <span>2. 選手を選択</span>
+                <span class="step-badge" id="tag-step2">待機中</span>
+            </div>
+            <div class="player-grid" id="player-grid-list"></div>
+        </div>
+
+        <!-- プレー選択 -->
+        <div class="card-section">
+            <div class="section-title">
+                <span>3. プレーを選択</span>
+                <span class="step-badge" id="tag-step3">待機中</span>
+            </div>
+            <div class="btn-grid-5">
+                <button class="action-btn" id="btn-play-spike" onclick="onSelectAction('スパイク')" disabled>スパイク</button>
+                <button class="action-btn" id="btn-play-block" onclick="onSelectAction('ブロック')" disabled>ブロック</button>
+                <button class="action-btn" id="btn-play-serve" onclick="onSelectAction('サーブ')" disabled>サーブ</button>
+                <button class="action-btn" id="btn-play-receive" onclick="onSelectAction('レシーブ')" disabled>レシーブ</button>
+                <button class="action-btn" id="btn-play-cut" onclick="onSelectAction('カット')" disabled>カット</button>
+            </div>
+
+            <div id="guide-message" class="guide-text">先に試合と選手を選択してください</div>
+
+            <!-- 動的結果ボタンエリア (塗りつぶしカラー) -->
+            <div id="result-buttons-area" style="display:none;"></div>
+        </div>
+
+        <!-- 直前記録Undo -->
+        <div class="toast-undo" id="toast-undo" style="display: none;">
+            <div id="undo-text">-</div>
+            <button class="btn-undo" onclick="undoLastLog()">取り消す</button>
+        </div>
+
+        <!-- タブ1内の直近記録履歴 -->
+        <div class="card-section">
+            <div class="section-title">直近の記録</div>
+            <div class="log-container" id="tab1-log-list">記録はありません</div>
+        </div>
+    </div>
+
+    <!-- 3. タブ2: 集計・管理画面 -->
+    <div id="tab2-view" style="display: none;">
+        <!-- 選手登録・一覧管理 -->
+        <div class="card-section">
+            <div class="section-title">選手登録・管理</div>
+            <div class="register-card">
+                <div class="register-form">
+                    <input type="text" id="reg-num" class="num-input" placeholder="#" value="12" />
+                    <input type="text" id="reg-name" class="name-input" placeholder="選手名" />
+                    <button class="btn-action-small" onclick="addNewPlayer()">＋ 登録</button>
+                </div>
+                <div class="player-grid" id="registered-player-chips"></div>
+            </div>
+        </div>
+
+        <!-- チーム集計 -->
+        <div class="card-section">
+            <div class="section-title">
+                <span>チーム集計</span>
+                <div class="set-tabs">
+                    <button class="set-tab-btn active" onclick="filterStats('ALL', this)">全体</button>
+                    <button class="set-tab-btn" onclick="filterStats('1', this)">S1</button>
+                    <button class="set-tab-btn" onclick="filterStats('2', this)">S2</button>
+                    <button class="set-tab-btn" onclick="filterStats('3', this)">S3</button>
+                    <button class="set-tab-btn" onclick="filterStats('4', this)">S4</button>
+                    <button class="set-tab-btn" onclick="filterStats('5', this)">S5</button>
+                </div>
+            </div>
+
+            <div class="stats-grid-container">
+                <div class="stat-card">
+                    <div class="stat-card-title">スパイク</div>
+                    <div class="stat-row"><span>決定</span><span class="stat-val success" id="st-spike-success">0</span></div>
+                    <div class="stat-row"><span>タッチ</span><span class="stat-val primary" id="st-spike-touch">0</span></div>
+                    <div class="stat-row"><span>失点</span><span class="stat-val danger" id="st-spike-miss">0</span></div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-card-title">ブロック</div>
+                    <div class="stat-row"><span>決定</span><span class="stat-val success" id="st-block-success">0</span></div>
+                    <div class="stat-row"><span>タッチ</span><span class="stat-val primary" id="st-block-touch">0</span></div>
+                    <div class="stat-row"><span>失点</span><span class="stat-val danger" id="st-block-miss">0</span></div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-card-title">サーブ</div>
+                    <div class="stat-row"><span>決定</span><span class="stat-val success" id="st-serve-success">0</span></div>
+                    <div class="stat-row"><span>効果</span><span class="stat-val primary" id="st-serve-effect">0</span></div>
+                    <div class="stat-row"><span>失点</span><span class="stat-val danger" id="st-serve-miss">0</span></div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-card-title">レシーブ</div>
+                    <div class="stat-row"><span>成功</span><span class="stat-val success" id="st-rec-success">0</span></div>
+                    <div class="stat-row"><span>Aパス</span><span class="stat-val primary" id="st-rec-a">0</span></div>
+                    <div class="stat-row"><span>失点</span><span class="stat-val danger" id="st-rec-miss">0</span></div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-card-title">カット</div>
+                    <div class="stat-row"><span>Aパス</span><span class="stat-val success" id="st-cut-a">0</span></div>
+                    <div class="stat-row"><span>Bパス</span><span class="stat-val primary" id="st-cut-b">0</span></div>
+                    <div class="stat-row"><span>Cパス</span><span class="stat-val danger" id="st-cut-c">0</span></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 個人集計 -->
+        <div class="card-section">
+            <div class="section-title">
+                <span>個人集計</span>
+                <select id="personal-player-select" class="player-select-dropdown" onchange="renderPersonalStats()">
+                    <option value="">選手を選択</option>
+                </select>
+            </div>
+
+            <div class="stats-grid-container" id="personal-stats-grid">
+                <div class="stat-card">
+                    <div class="stat-card-title">スパイク (個人)</div>
+                    <div class="stat-row"><span>決定</span><span class="stat-val success" id="pst-spike-success">0</span></div>
+                    <div class="stat-row"><span>タッチ</span><span class="stat-val primary" id="pst-spike-touch">0</span></div>
+                    <div class="stat-row"><span>失点</span><span class="stat-val danger" id="pst-spike-miss">0</span></div>
+                    <div class="stat-row" style="margin-top:4px; border-top:1px solid var(--border); padding-top:4px;">
+                        <span>決定率</span><span class="stat-val primary" id="pst-spike-rate">0%</span>
+                    </div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-card-title">ブロック (個人)</div>
+                    <div class="stat-row"><span>決定</span><span class="stat-val success" id="pst-block-success">0</span></div>
+                    <div class="stat-row"><span>タッチ</span><span class="stat-val primary" id="pst-block-touch">0</span></div>
+                    <div class="stat-row"><span>失点</span><span class="stat-val danger" id="pst-block-miss">0</span></div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-card-title">サーブ (個人)</div>
+                    <div class="stat-row"><span>決定</span><span class="stat-val success" id="pst-serve-success">0</span></div>
+                    <div class="stat-row"><span>効果</span><span class="stat-val primary" id="pst-serve-effect">0</span></div>
+                    <div class="stat-row"><span>失点</span><span class="stat-val danger" id="pst-serve-miss">0</span></div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-card-title">レシーブ (個人)</div>
+                    <div class="stat-row"><span>成功</span><span class="stat-val success" id="pst-rec-success">0</span></div>
+                    <div class="stat-row"><span>Aパス</span><span class="stat-val primary" id="pst-rec-a">0</span></div>
+                    <div class="stat-row"><span>失点</span><span class="stat-val danger" id="pst-rec-miss">0</span></div>
+                </div>
+
+                <div class="stat-card">
+                    <div class="stat-card-title">カット (個人)</div>
+                    <div class="stat-row"><span>Aパス</span><span class="stat-val success" id="pst-cut-a">0</span></div>
+                    <div class="stat-row"><span>Bパス</span><span class="stat-val primary" id="pst-cut-b">0</span></div>
+                    <div class="stat-row"><span>Cパス</span><span class="stat-val danger" id="pst-cut-c">0</span></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 記録履歴一覧 -->
+        <div class="card-section">
+            <div class="section-title">記録履歴 (全ログ)</div>
+            <div class="log-container" id="log-list">記録はありません</div>
+            <button class="btn-export" onclick="exportCSV()">📄 CSV出力・共有</button>
+            <button class="btn-reset-danger" onclick="resetAllData()">🗑 ルームデータ初期化</button>
+        </div>
+    </div>
+
+    <!-- 4. ボトムナビ -->
+    <div class="bottom-nav">
+        <button class="nav-item active" id="btn-nav-1" onclick="switchTab(1)">
+            <svg class="nav-icon" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+            <span>記録</span>
+        </button>
+        <button class="nav-item" id="btn-nav-2" onclick="switchTab(2)">
+            <svg class="nav-icon" viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
+            <span>集計・管理</span>
+        </button>
+    </div>
+
+    <textarea id="copy-textarea"></textarea>
+
+    <script>
+        // アプリケーション状態変数
+        let currentState = 'noMatch';
+        let selectedPlayer = null;
+        let selectedAction = null;
+        let currentStatsSet = 'ALL';
+        let lastLogId = null;
+
+        const KEY_THEME = "vball_theme_setting";
+
+        // 結果ボタンマップ
+        const RESULT_MAP = {
+            'スパイク': [
+                { label: '＋ 決定', val: '決定', cls: 'btn-success' },
+                { label: '＋ タッチ', val: 'タッチ', cls: 'btn-warning' },
+                { label: '✕ 失点', val: '失点', cls: 'btn-miss' }
+            ],
+            'ブロック': [
+                { label: '＋ 決定', val: '決定', cls: 'btn-success' },
+                { label: '＋ タッチ', val: 'タッチ', cls: 'btn-warning' },
+                { label: '✕ 失点', val: '失点', cls: 'btn-miss' }
+            ],
+            'サーブ': [
+                { label: '＋ 決定', val: '決定', cls: 'btn-success' },
+                { label: '＋ 効果', val: '効果', cls: 'btn-info' },
+                { label: '✕ 失点', val: '失点', cls: 'btn-miss' }
+            ],
+            'レシーブ': [
+                { label: '＋ 成功', val: '成功', cls: 'btn-success' },
+                { label: '＋ Aパス', val: 'Aパス', cls: 'btn-purple' },
+                { label: '＋ Bパス', val: 'Bパス', cls: 'btn-info' },
+                { label: '✕ 失点', val: '失点', cls: 'btn-miss' }
+            ],
+            'カット': [
+                { label: '＋ Aパス', val: 'Aパス', cls: 'btn-purple' },
+                { label: '＋ Bパス', val: 'Bパス', cls: 'btn-info' },
+                { label: '＋ Cパス', val: 'Cパス', cls: 'btn-warning' },
+                { label: '✕ 失点', val: '失点', cls: 'btn-miss' }
+            ]
+        };
+
+        // 状態が変更された際、自端末UI描画＆クラウド保存を実行
+        function commitState() {
+            renderAllUI();
+            if (window.saveStateToCloud) {
+                window.saveStateToCloud();
+            }
+        }
+
+        // 画面全体の一括再描画（他端末からのリアルタイム受信時もコレが呼ばれる）
+        window.renderAllUI = function() {
+            const state = window.appState || {};
+            const matches = state.matches || [];
+
+            if (!state.currentMatchId && matches.length > 0) {
+                state.currentMatchId = matches[0].id;
+            }
+
+            const currentMatch = matches.find(m => m.id === state.currentMatchId);
+
+            updateHeaderInfo(currentMatch);
+            renderMatchCardsList(matches, state.currentMatchId);
+            renderPlayerGrid(state.players || []);
+            renderRegisteredPlayers(state.players || []);
+            updatePersonalPlayerDropdown(state.players || []);
+            updateStepAndButtons(currentMatch);
+            renderStats();
+            renderPersonalStats();
+            renderLogs();
+        };
+
+        function updateHeaderInfo(match) {
+            const dateEl = document.getElementById('header-date');
+            const oppTag = document.getElementById('header-opp-tag');
+            const myScoreEl = document.getElementById('header-my-score');
+            const oppScoreEl = document.getElementById('header-opp-score');
+            const setSel = document.getElementById('header-set-select');
+
+            if (!match) {
+                if (dateEl) dateEl.innerText = '----/--/-- --:--';
+                if (oppTag) oppTag.innerText = '相手';
+                if (myScoreEl) myScoreEl.innerText = '0';
+                if (oppScoreEl) oppScoreEl.innerText = '0';
+                if (setSel) setSel.value = "1";
+                return;
+            }
+
+            if (dateEl) dateEl.innerText = match.date || '';
+            if (oppTag) oppTag.innerText = match.opponent || '相手';
+            if (myScoreEl) myScoreEl.innerText = match.myScore || 0;
+            if (oppScoreEl) oppScoreEl.innerText = match.oppScore || 0;
+            if (setSel) setSel.value = match.currentSet || 1;
+        }
+
+        function renderMatchCardsList(matches, currentMatchId) {
+            const container = document.getElementById('match-cards-list');
+            if (!container) return;
+            container.innerHTML = '';
+
+            if (matches.length === 0) {
+                container.innerHTML = `<div class="empty-notice">試合データがありません。<br>上の入力フォームから作成してください。</div>`;
+                return;
+            }
+
+            matches.forEach(m => {
+                const isSelected = (m.id === currentMatchId);
+                const card = document.createElement('div');
+                card.className = `match-card ${isSelected ? 'selected-match' : ''}`;
+                
+                card.innerHTML = `
+                    <div style="display:flex; justify-content:space-between; align-items:flex-start;">
+                        <div>
+                            <div class="match-title">vs ${m.opponent} ${isSelected ? '<span style="font-size:0.75rem; color:var(--primary); margin-left:4px;">(選択中)</span>' : ''}</div>
+                            <div class="match-meta">${m.date}</div>
+                        </div>
+                        <button class="btn-delete-small" onclick="handleDeleteMatch('${m.id}', event)">削除</button>
+                    </div>
+                    <div class="match-scores-history">
+                        第${m.currentSet || 1}セット: 自 <span style="font-weight:bold; color:var(--primary);">${m.myScore || 0}</span> - <span style="font-weight:bold; color:var(--danger);">${m.oppScore || 0}</span> 相手
+                    </div>
+                `;
+
+                card.onclick = (e) => {
+                    if (e.target.tagName !== 'BUTTON') {
+                        handleSelectMatch(m.id);
+                    }
+                };
+
+                container.appendChild(card);
+            });
+        }
+
+        function updateStepAndButtons(match) {
+            const tag1 = document.getElementById('tag-step1');
+            const tag2 = document.getElementById('tag-step2');
+            const tag3 = document.getElementById('tag-step3');
+            const guideMsg = document.getElementById('guide-message');
+
+            const playButtons = [
+                document.getElementById('btn-play-spike'),
+                document.getElementById('btn-play-block'),
+                document.getElementById('btn-play-serve'),
+                document.getElementById('btn-play-receive'),
+                document.getElementById('btn-play-cut')
+            ];
+
+            if (!match) {
+                currentState = 'noMatch';
+                if (tag1) { tag1.innerText = '要選択'; tag1.className = 'step-badge active'; }
+                if (tag2) { tag2.innerText = '待機中'; tag2.className = 'step-badge'; }
+                if (tag3) { tag3.innerText = '待機中'; tag3.className = 'step-badge'; }
+                if (guideMsg) guideMsg.innerText = '↑ 先に試合を作成または選択してください';
+                playButtons.forEach(b => { if(b) b.disabled = true; });
+                document.getElementById('result-buttons-area').style.display = 'none';
+                return;
+            }
+
+            if (tag1) { tag1.innerText = '選択済'; tag1.className = 'step-badge'; }
+
+            if (!selectedPlayer) {
+                currentState = 'matchSelected';
+                if (tag2) { tag2.innerText = '要選択'; tag2.className = 'step-badge active'; }
+                if (tag3) { tag3.innerText = '待機中'; tag3.className = 'step-badge'; }
+                if (guideMsg) guideMsg.innerText = '↑ 記録する選手を選択してください';
+                playButtons.forEach(b => { if(b) b.disabled = true; });
+                document.getElementById('result-buttons-area').style.display = 'none';
+            } else {
+                if (tag2) { tag2.innerText = selectedPlayer; tag2.className = 'step-badge'; }
+                if (tag3) { tag3.innerText = selectedAction || '要選択'; tag3.className = 'step-badge active'; }
+                if (guideMsg) guideMsg.innerText = `${selectedPlayer} のプレーを選択してください`;
+                playButtons.forEach(b => { if(b) b.disabled = false; });
+            }
+
+            ['spike','block','serve','receive','cut'].forEach(id => {
+                const btn = document.getElementById(`btn-play-${id}`);
+                if (!btn) return;
+                const isCurrent = (
+                    (id === 'spike' && selectedAction === 'スパイク') ||
+                    (id === 'block' && selectedAction === 'ブロック') ||
+                    (id === 'serve' && selectedAction === 'サーブ') ||
+                    (id === 'receive' && selectedAction === 'レシーブ') ||
+                    (id === 'cut' && selectedAction === 'カット')
+                );
+                if (isCurrent) btn.classList.add('active-play');
+                else btn.classList.remove('active-play');
+            });
+        }
+
+        // スコア更新
+        function updateScore(team, val) {
+            const state = window.appState;
+            if (!state.currentMatchId) return;
+
+            const match = state.matches.find(m => m.id === state.currentMatchId);
+            if (!match) return;
+
+            if (team === 'my') {
+                match.myScore = Math.max(0, (match.myScore || 0) + val);
+            } else {
+                match.oppScore = Math.max(0, (match.oppScore || 0) + val);
+            }
+
+            commitState();
+        }
+
+        function onChangeCurrentSet() {
+            const state = window.appState;
+            if (!state.currentMatchId) return;
+
+            const match = state.matches.find(m => m.id === state.currentMatchId);
+            if (!match) return;
+
+            match.currentSet = parseInt(document.getElementById('header-set-select').value);
+            commitState();
+        }
+
+        // 試合作成・選択・削除
+        function handleCreateMatch() {
+            const oppInput = document.getElementById('new-opponent');
+            const dateInput = document.getElementById('new-date');
+            const timeInput = document.getElementById('new-time');
+
+            const oppName = oppInput.value.trim();
+            if (!oppName) {
+                alert('対戦相手名を入力してください');
+                return;
+            }
+
+            const now = new Date();
+            const dateStr = dateInput.value || now.toISOString().split('T')[0];
+            const timeStr = timeInput.value || now.toTimeString().slice(0, 5);
+
+            const newMatch = {
+                id: `match_${Date.now()}`,
+                opponent: oppName,
+                date: `${dateStr} ${timeStr}`,
+                currentSet: 1,
+                myScore: 0,
+                oppScore: 0
+            };
+
+            window.appState.matches.unshift(newMatch);
+            window.appState.currentMatchId = newMatch.id;
+            oppInput.value = '';
+
+            selectedPlayer = null;
+            selectedAction = null;
+
+            commitState();
+        }
+
+        function handleSelectMatch(id) {
+            window.appState.currentMatchId = id;
+            selectedPlayer = null;
+            selectedAction = null;
+            commitState();
+        }
+
+        function handleDeleteMatch(id, event) {
+            if (event) event.stopPropagation();
+            if (!confirm('この試合と全記録データを削除しますか？')) return;
+
+            window.appState.matches = window.appState.matches.filter(m => m.id !== id);
+            window.appState.logs = window.appState.logs.filter(l => l.matchId !== id);
+
+            if (window.appState.currentMatchId === id) {
+                window.appState.currentMatchId = window.appState.matches.length > 0 ? window.appState.matches[0].id : null;
+            }
+
+            selectedPlayer = null;
+            selectedAction = null;
+            commitState();
+        }
+
+        // 選手選択
+        function selectPlayer(numName) {
+            if (!window.appState.currentMatchId) {
+                alert('先に試合を選択してください');
+                return;
+            }
+            selectedPlayer = numName;
+            selectedAction = null;
+            renderAllUI();
+        }
+
+        function renderPlayerGrid(players) {
+            const grid = document.getElementById('player-grid-list');
+            if (!grid) return;
+            grid.innerHTML = '';
+
+            players.forEach(p => {
+                const numName = `#${p.num} ${p.name}`;
+                const isSel = (numName === selectedPlayer);
+                const chip = document.createElement('div');
+                chip.className = `player-chip ${isSel ? 'selected' : ''}`;
+                chip.innerHTML = `<span class="num">#${p.num}</span><span>${p.name}</span>`;
+                chip.onclick = () => selectPlayer(numName);
+                grid.appendChild(chip);
+            });
+        }
+
+        // プレー選択
+        function onSelectAction(actName) {
+            if (!selectedPlayer) return;
+
+            selectedAction = actName;
+            renderAllUI();
+
+            const area = document.getElementById('result-buttons-area');
+            area.style.display = 'block';
+            area.innerHTML = '';
+
+            const opts = RESULT_MAP[actName] || [];
+            const gridDiv = document.createElement('div');
+            gridDiv.className = 'result-grid';
+
+            opts.forEach(o => {
+                const btn = document.createElement('button');
+                btn.className = `btn-result ${o.cls}`;
+                btn.innerText = o.label;
+                btn.onclick = () => saveResultLog(o.val);
+                gridDiv.appendChild(btn);
+            });
+
+            area.appendChild(gridDiv);
+        }
+
+        // 結果ログ記録
+        function saveResultLog(resultVal) {
+            const state = window.appState;
+            if (!state.currentMatchId || !selectedPlayer || !selectedAction) return;
+
+            const match = state.matches.find(m => m.id === state.currentMatchId);
+            const currentSetNum = match ? (match.currentSet || 1) : 1;
+
+            const now = new Date();
+            const timeStr = now.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' });
+
+            const log = {
+                id: Date.now(),
+                matchId: state.currentMatchId,
+                set: currentSetNum,
+                player: selectedPlayer,
+                category: selectedAction,
+                action: resultVal,
+                time: timeStr
+            };
+
+            state.logs.unshift(log);
+            lastLogId = log.id;
+
+            document.getElementById('undo-text').innerText = `${selectedPlayer} / ${selectedAction} [${resultVal}]`;
+            document.getElementById('toast-undo').style.display = 'flex';
+
+            selectedAction = null;
+            document.getElementById('result-buttons-area').style.display = 'none';
+
+            commitState();
+        }
+
+        function undoLastLog() {
+            if (!lastLogId) return;
+            window.appState.logs = window.appState.logs.filter(l => l.id !== lastLogId);
+            lastLogId = null;
+            document.getElementById('toast-undo').style.display = 'none';
+            commitState();
+        }
+
+        function deleteLog(id) {
+            window.appState.logs = window.appState.logs.filter(l => l.id !== id);
+            if (lastLogId === id) {
+                document.getElementById('toast-undo').style.display = 'none';
+            }
+            commitState();
+        }
+
+        // 選手追加・削除
+        function addNewPlayer() {
+            const numEl = document.getElementById('reg-num');
+            const nameEl = document.getElementById('reg-name');
+            const num = numEl.value.trim();
+            const name = nameEl.value.trim();
+            if (!num || !name) return;
+
+            window.appState.players.push({ num, name });
+            numEl.value = '';
+            nameEl.value = '';
+
+            commitState();
+        }
+
+        function deletePlayer(num) {
+            window.appState.players = window.appState.players.filter(p => p.num !== num);
+            commitState();
+        }
+
+        function renderRegisteredPlayers(players) {
+            const container = document.getElementById('registered-player-chips');
+            if (!container) return;
+            container.innerHTML = '';
+            players.forEach(p => {
+                const chip = document.createElement('div');
+                chip.className = 'player-chip';
+                chip.innerHTML = `
+                    <span class="num">#${p.num}</span>
+                    <span>${p.name}</span>
+                    <button class="chip-del-btn" onclick="deletePlayer('${p.num}')" title="削除">×</button>
+                `;
+                container.appendChild(chip);
+            });
+        }
+
+        function updatePersonalPlayerDropdown(players) {
+            const sel = document.getElementById('personal-player-select');
+            if (!sel) return;
+
+            const currentVal = sel.value;
+            sel.innerHTML = '<option value="">選手を選択</option>';
+
+            players.forEach(p => {
+                const numName = `#${p.num} ${p.name}`;
+                const opt = document.createElement('option');
+                opt.value = numName;
+                opt.innerText = numName;
+                sel.appendChild(opt);
+            });
+
+            if (currentVal && players.some(p => `#${p.num} ${p.name}` === currentVal)) {
+                sel.value = currentVal;
+            } else if (players.length > 0 && !currentVal) {
+                sel.value = `#${players[0].num} ${players[0].name}`;
+            }
+        }
+
+        // 集計関数
+        function filterStats(setVal, btnEl) {
+            currentStatsSet = setVal;
+            document.querySelectorAll('.set-tab-btn').forEach(b => b.classList.remove('active'));
+            if (btnEl) btnEl.classList.add('active');
+            renderStats();
+            renderPersonalStats();
+        }
+
+        function renderStats() {
+            const logs = window.appState.logs || [];
+            const filtered = logs.filter(l => l.matchId === window.appState.currentMatchId && (currentStatsSet === 'ALL' || l.set === parseInt(currentStatsSet)));
+
+            let spikeS = 0, spikeT = 0, spikeM = 0;
+            let blockS = 0, blockT = 0, blockM = 0;
+            let serveS = 0, serveE = 0, serveM = 0;
+            let recS = 0, recA = 0, recM = 0;
+            let cutA = 0, cutB = 0, cutC = 0;
+
+            filtered.forEach(l => {
+                if (l.category === 'スパイク') {
+                    if (l.action === '決定') spikeS++;
+                    if (l.action === 'タッチ') spikeT++;
+                    if (l.action === '失点') spikeM++;
+                } else if (l.category === 'ブロック') {
+                    if (l.action === '決定') blockS++;
+                    if (l.action === 'タッチ') blockT++;
+                    if (l.action === '失点') blockM++;
+                } else if (l.category === 'サーブ') {
+                    if (l.action === '決定') serveS++;
+                    if (l.action === '効果') serveE++;
+                    if (l.action === '失点') serveM++;
+                } else if (l.category === 'レシーブ') {
+                    if (l.action === '成功') recS++;
+                    if (l.action === 'Aパス') recA++;
+                    if (l.action === '失点') recM++;
+                } else if (l.category === 'カット') {
+                    if (l.action === 'Aパス') cutA++;
+                    if (l.action === 'Bパス') cutB++;
+                    if (l.action === 'Cパス' || l.action === '失点') cutC++;
+                }
+            });
+
+            document.getElementById('st-spike-success').innerText = spikeS;
+            document.getElementById('st-spike-touch').innerText = spikeT;
+            document.getElementById('st-spike-miss').innerText = spikeM;
+
+            document.getElementById('st-block-success').innerText = blockS;
+            document.getElementById('st-block-touch').innerText = blockT;
+            document.getElementById('st-block-miss').innerText = blockM;
+
+            document.getElementById('st-serve-success').innerText = serveS;
+            document.getElementById('st-serve-effect').innerText = serveE;
+            document.getElementById('st-serve-miss').innerText = serveM;
+
+            document.getElementById('st-rec-success').innerText = recS;
+            document.getElementById('st-rec-a').innerText = recA;
+            document.getElementById('st-rec-miss').innerText = recM;
+
+            document.getElementById('st-cut-a').innerText = cutA;
+            document.getElementById('st-cut-b').innerText = cutB;
+            document.getElementById('st-cut-c').innerText = cutC;
+        }
+
+        function renderPersonalStats() {
+            const selPlayer = document.getElementById('personal-player-select')?.value;
+            const logs = window.appState.logs || [];
+
+            const filtered = logs.filter(l => {
+                const isMatch = l.matchId === window.appState.currentMatchId;
+                const matchSet = (currentStatsSet === 'ALL' || l.set === parseInt(currentStatsSet));
+                const matchPlayer = selPlayer ? (l.player === selPlayer) : false;
+                return isMatch && matchSet && matchPlayer;
+            });
+
+            let spikeS = 0, spikeT = 0, spikeM = 0;
+            let blockS = 0, blockT = 0, blockM = 0;
+            let serveS = 0, serveE = 0, serveM = 0;
+            let recS = 0, recA = 0, recM = 0;
+            let cutA = 0, cutB = 0, cutC = 0;
+
+            filtered.forEach(l => {
+                if (l.category === 'スパイク') {
+                    if (l.action === '決定') spikeS++;
+                    if (l.action === 'タッチ') spikeT++;
+                    if (l.action === '失点') spikeM++;
+                } else if (l.category === 'ブロック') {
+                    if (l.action === '決定') blockS++;
+                    if (l.action === 'タッチ') blockT++;
+                    if (l.action === '失点') blockM++;
+                } else if (l.category === 'サーブ') {
+                    if (l.action === '決定') serveS++;
+                    if (l.action === '効果') serveE++;
+                    if (l.action === '失点') serveM++;
+                } else if (l.category === 'レシーブ') {
+                    if (l.action === '成功') recS++;
+                    if (l.action === 'Aパス') recA++;
+                    if (l.action === '失点') recM++;
+                } else if (l.category === 'カット') {
+                    if (l.action === 'Aパス') cutA++;
+                    if (l.action === 'Bパス') cutB++;
+                    if (l.action === 'Cパス' || l.action === '失点') cutC++;
+                }
+            });
+
+            const spikeTotal = spikeS + spikeT + spikeM;
+            const spikeRate = spikeTotal > 0 ? ((spikeS / spikeTotal) * 100).toFixed(1) + '%' : '0%';
+
+            document.getElementById('pst-spike-success').innerText = spikeS;
+            document.getElementById('pst-spike-touch').innerText = spikeT;
+            document.getElementById('pst-spike-miss').innerText = spikeM;
+            document.getElementById('pst-spike-rate').innerText = spikeRate;
+
+            document.getElementById('pst-block-success').innerText = blockS;
+            document.getElementById('pst-block-touch').innerText = blockT;
+            document.getElementById('pst-block-miss').innerText = blockM;
+
+            document.getElementById('pst-serve-success').innerText = serveS;
+            document.getElementById('pst-serve-effect').innerText = serveE;
+            document.getElementById('pst-serve-miss').innerText = serveM;
+
+            document.getElementById('pst-rec-success').innerText = recS;
+            document.getElementById('pst-rec-a').innerText = recA;
+            document.getElementById('pst-rec-miss').innerText = recM;
+
+            document.getElementById('pst-cut-a').innerText = cutA;
+            document.getElementById('pst-cut-b').innerText = cutB;
+            document.getElementById('pst-cut-c').innerText = cutC;
+        }
+
+        function renderLogs() {
+            const logs = window.appState.logs || [];
+            const matchLogs = logs.filter(l => l.matchId === window.appState.currentMatchId);
+
+            const t1Container = document.getElementById('tab1-log-list');
+            if (t1Container) {
+                t1Container.innerHTML = '';
+                if (matchLogs.length === 0) {
+                    t1Container.innerHTML = '<div style="text-align:center; color:var(--text-muted); padding:8px;">記録はありません</div>';
+                } else {
+                    matchLogs.slice(0, 5).forEach(l => {
+                        const item = document.createElement('div');
+                        item.className = 'log-item';
+                        item.innerHTML = `
+                            <div>
+                                <span style="color:var(--text-muted); font-size:0.75rem;">[S${l.set} ${l.time}]</span>
+                                <strong style="color:var(--primary); margin:0 4px;">${l.player}</strong>
+                                <span>${l.category} (${l.action})</span>
+                            </div>
+                            <button class="btn-delete-small" onclick="deleteLog(${l.id})">削除</button>
+                        `;
+                        t1Container.appendChild(item);
+                    });
+                }
+            }
+
+            const t2Container = document.getElementById('log-list');
+            if (t2Container) {
+                t2Container.innerHTML = '';
+                if (logs.length === 0) {
+                    t2Container.innerHTML = '<div style="text-align:center; color:var(--text-muted); padding:8px;">記録はありません</div>';
+                } else {
+                    logs.forEach(l => {
+                        const item = document.createElement('div');
+                        item.className = 'log-item';
+                        item.innerHTML = `
+                            <div>
+                                <span style="color:var(--text-muted); font-size:0.75rem;">[S${l.set} ${l.time}]</span>
+                                <strong style="color:var(--primary); margin:0 4px;">${l.player}</strong>
+                                <span>${l.category} (${l.action})</span>
+                            </div>
+                            <button class="btn-delete-small" onclick="deleteLog(${l.id})">削除</button>
+                        `;
+                        t2Container.appendChild(item);
+                    });
+                }
+            }
+        }
+
+        // 共有URLコピー
+        function copyShareUrl() {
+            const currentUrl = window.location.href;
+            const textarea = document.getElementById('copy-textarea');
+            if (textarea) {
+                textarea.value = currentUrl;
+                textarea.select();
+                try {
+                    document.execCommand('copy');
+                    alert(`共有リンクをコピーしました！\nこのURLを他の端末で開くとリアルタイム共有されます。\n\nURL: ${currentUrl}`);
+                } catch (err) {
+                    prompt("以下のURLをコピーして相手に共有してください:", currentUrl);
+                }
+            }
+        }
+
+        // テーマ切り替え
+        function toggleTheme() {
+            const currentTheme = document.documentElement.getAttribute('data-theme') || 'dark';
+            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            document.documentElement.setAttribute('data-theme', newTheme);
+            localStorage.setItem(KEY_THEME, newTheme);
+            updateThemeIcon(newTheme);
+        }
+
+        function updateThemeIcon(theme) {
+            const icon = document.getElementById('theme-icon');
+            if (!icon) return;
+            if (theme === 'light') {
+                icon.innerHTML = '<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>';
+            } else {
+                icon.innerHTML = '<circle cx="12" cy="12" r="5"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>';
+            }
+        }
+
+        // タブ切り替え
+        function switchTab(num) {
+            document.getElementById('tab1-view').style.display = (num === 1) ? 'block' : 'none';
+            document.getElementById('tab2-view').style.display = (num === 2) ? 'block' : 'none';
+            document.getElementById('btn-nav-1').className = `nav-item ${num === 1 ? 'active' : ''}`;
+            document.getElementById('btn-nav-2').className = `nav-item ${num === 2 ? 'active' : ''}`;
+            if (num === 2) {
+                renderAllUI();
+            }
+        }
+
+        // CSV出力
+        function exportCSV() {
+            const logs = window.appState.logs || [];
+            const matchLogs = logs.filter(l => l.matchId === window.appState.currentMatchId);
+
+            if (matchLogs.length === 0) {
+                alert("出力するデータがありません");
+                return;
+            }
+
+            const matches = window.appState.matches || [];
+            const match = matches.find(m => m.id === window.appState.currentMatchId);
+            const oppName = match ? match.opponent : '試合データ';
+
+            let csv = "試合,セット,時間,選手,プレー,結果\n";
+            matchLogs.forEach(l => {
+                csv += `vs ${oppName},S${l.set},${l.time},${l.player},${l.category},${l.action}\n`;
+            });
+
+            const blob = new Blob(["\uFEFF" + csv], { type: 'text/csv;charset=utf-8;' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `バレーボール記録_vs${oppName}_${new Date().toISOString().slice(0,10)}.csv`;
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        // データ初期化
+        function resetAllData() {
+            if (!confirm("本当にこのルームの全てのデータを初期化しますか？")) return;
+            window.appState = {
+                matches: [],
+                logs: [],
+                players: [
+                    { num: "1", name: "山田 太郎" },
+                    { num: "5", name: "鈴木 健太" },
+                    { num: "7", name: "田中 涼" },
+                    { num: "10", name: "佐藤 大輝" },
+                    { num: "14", name: "中村 蓮" },
+                    { num: "3", name: "伊藤 翔" }
+                ],
+                currentMatchId: null
+            };
+            commitState();
+        }
+
+        // イベントバインド
+        window.updateScore = updateScore;
+        window.onChangeCurrentSet = onChangeCurrentSet;
+        window.handleCreateMatch = handleCreateMatch;
+        window.handleSelectMatch = handleSelectMatch;
+        window.handleDeleteMatch = handleDeleteMatch;
+        window.selectPlayer = selectPlayer;
+        window.onSelectAction = onSelectAction;
+        window.saveResultLog = saveResultLog;
+        window.undoLastLog = undoLastLog;
+        window.deleteLog = deleteLog;
+        window.addNewPlayer = addNewPlayer;
+        window.deletePlayer = deletePlayer;
+        window.filterStats = filterStats;
+        window.renderPersonalStats = renderPersonalStats;
+        window.copyShareUrl = copyShareUrl;
+        window.toggleTheme = toggleTheme;
+        window.switchTab = switchTab;
+        window.exportCSV = exportCSV;
+        window.resetAllData = resetAllData;
+
+        // 初期ロード時処理
+        window.onload = function() {
+            const savedTheme = localStorage.getItem(KEY_THEME) || 'dark';
+            document.documentElement.setAttribute('data-theme', savedTheme);
+            updateThemeIcon(savedTheme);
+
+            const now = new Date();
+            const dateInput = document.getElementById('new-date');
+            const timeInput = document.getElementById('new-time');
+            if (dateInput) dateInput.value = now.toISOString().split('T')[0];
+            if (timeInput) timeInput.value = now.toTimeString().slice(0, 5);
+
+            renderAllUI();
+
+            // クラウド同期の初期化実行
+            if (window.initSyncSystem) {
+                window.initSyncSystem();
+            }
+        };
+    </script>
+</body>
+</html>
