@@ -476,14 +476,20 @@
         .result-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-top: 8px; }
 
         .btn-result {
-            height: 40px;
-            font-size: 0.78rem;
+            height: 42px;
+            font-size: 0.75rem;
             font-weight: 700;
             border: none;
             border-radius: 6px;
             color: #ffffff;
             cursor: pointer;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            line-height: 1.1;
         }
+        .btn-result .sub-note { font-size: 0.62rem; font-weight: normal; opacity: 0.9; margin-top: 2px; }
 
         .btn-result.btn-success { background-color: var(--success); }
         .btn-result.btn-miss { background-color: var(--danger); }
@@ -677,7 +683,7 @@
                 subPassword: "1234",
                 subDeviceIds: [],
                 allowSubOfflineOverwrite: true,
-                updatedAt: Date.now()
+                updatedAt: 0 // クラウド上の既存データを確実に優先受信するため0で初期化
             };
         }
 
@@ -755,6 +761,7 @@
 
             if (unsubscribeSync) unsubscribeSync();
 
+            isPushing = false;
             updateSyncBadge('connecting');
 
             if (db && auth) {
@@ -792,7 +799,11 @@
 
                 if (docSnap.exists()) {
                     const remoteData = docSnap.data();
-                    if (remoteData && remoteData.updatedAt && remoteData.updatedAt > window.appState.updatedAt) {
+                    const remoteTime = remoteData ? (remoteData.updatedAt || 0) : 0;
+                    const localTime = window.appState ? (window.appState.updatedAt || 0) : 0;
+
+                    // クラウドデータが存在し、クラウドの方が新しいか、ローカルが初期状態（0）の場合はクラウドデータを反映
+                    if (remoteData && (remoteTime >= localTime || localTime === 0)) {
                         window.appState = remoteData;
                         localStorage.setItem(`vball_data_room_${window.currentRoomId}`, JSON.stringify(window.appState));
                         if (window.renderAllUI) window.renderAllUI();
@@ -951,11 +962,11 @@
             <div id="match-cards-list"></div>
         </div>
 
-        <!-- クイック選択エリア -->
+        <!-- クイック選択エリア（失点・得点ボタン中心） -->
         <div class="card-section">
             <div class="quick-section">
                 <div class="section-title" style="margin-bottom:0;">
-                    <span>クイック選択 (端末固定)</span>
+                    <span>クイック選択 (失点・得点・単発記録)</span>
                     <button class="btn-config-toggle" onclick="openQuickConfigModal()">
                         <svg class="icon-svg" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
                         設定
@@ -1121,7 +1132,7 @@
                     <button class="btn-action-small" onclick="openRoomWelcomeModal()" style="font-size:0.68rem; padding:3px 8px;">ルーム作成/切替</button>
                 </div>
                 <div style="font-size:0.7rem; color:var(--text-muted);">
-                    ※同じルーム番号を入力することで、他の端末から閲覧・記録が可能です。
+                    ※同じルーム番号を入力することで、他の端末からリアルタイム閲覧・記録が可能です。
                 </div>
             </div>
         </div>
@@ -1221,9 +1232,9 @@
         </div>
     </div>
 
-    <!-- カスタム通知・確認ダイアログ (alert/confirm代替) -->
+    <!-- カスタム通知・確認ダイアログ (alert/confirm完全排除) -->
     <div class="modal-bg" id="custom-dialog-modal" style="z-index: 4000;">
-        <div class="modal-box" style="max-width: 360px; text-align: center;">
+        <div class="modal-box" style="max-width: 380px; text-align: center;">
             <div id="custom-dialog-message" style="margin-bottom: 14px; font-size: 0.85rem; font-weight: 600; line-height: 1.4;"></div>
             <div style="display: flex; justify-content: center; gap: 8px;" id="custom-dialog-buttons"></div>
         </div>
@@ -1238,15 +1249,16 @@
         let lastLogId = null;
 
         const KEY_THEME = "vball_theme_setting";
-        const KEY_QUICK_CONFIG = "vball_quick_config_device_v4";
+        const KEY_QUICK_CONFIG = "vball_quick_config_device_v5";
         const KEY_PLAYER_ORDER = "vball_player_order_device_v2";
 
+        /* 得点・失点操作を主軸としたシンプルなデフォルトボタン構成 */
         const DEFAULT_QUICK_CONFIG = [
-            { label: 'スパイク成功', player: '指定なし', category: 'スパイク', action: '成功', cls: 'type-success' },
-            { label: '相手失点 (自加点)', player: '指定なし', category: '相手失点', action: '相手ミス', cls: 'type-opp-miss' },
-            { label: '相手得点 (相手加点)', player: '指定なし', category: '相手得点', action: '失点', cls: 'type-miss' },
-            { label: 'サーブ効果', player: '指定なし', category: 'サーブ', action: '効果', cls: 'type-info' },
-            { label: 'カット Aパス', player: '指定なし', category: 'カット', action: 'Aパス', cls: 'type-purple' }
+            { label: '相手失点 (自+1)', player: '指定なし', category: '相手失点', action: '相手ミス', cls: 'type-opp-miss' },
+            { label: '自失点 (相手+1)', player: '指定なし', category: '相手得点', action: '失点', cls: 'type-miss' },
+            { label: 'アタック決定 (自+1)', player: '指定なし', category: 'スパイク', action: '成功', cls: 'type-success' },
+            { label: 'サービスエース (自+1)', player: '指定なし', category: 'サーブ', action: '成功', cls: 'type-success' },
+            { label: 'ブロック決定 (自+1)', player: '指定なし', category: 'ブロック', action: '成功', cls: 'type-success' }
         ];
 
         function showCustomAlert(msg) {
@@ -1298,33 +1310,34 @@
             localStorage.setItem(KEY_PLAYER_ORDER, JSON.stringify(orderArr));
         }
 
+        /* プレー毎の選択オプション（スコア自動加算の対応注記つき） */
         const RESULT_MAP = {
             'スパイク': [
-                { label: '成功 (得点)', val: '成功', cls: 'btn-success' },
-                { label: '効果', val: '効果', cls: 'btn-info' },
-                { label: '失点', val: '失点', cls: 'btn-miss' }
+                { label: '成功 (決定)', note: '自チーム +1点', val: '成功', cls: 'btn-success' },
+                { label: '効果 (継続)', note: '加点なし', val: '効果', cls: 'btn-info' },
+                { label: '失点 (ミス)', note: '相手チーム +1点', val: '失点', cls: 'btn-miss' }
             ],
             'ブロック': [
-                { label: '成功 (得点)', val: '成功', cls: 'btn-success' },
-                { label: '効果', val: '効果', cls: 'btn-info' },
-                { label: '失点', val: '失点', cls: 'btn-miss' }
+                { label: '成功 (決定)', note: '自チーム +1点', val: '成功', cls: 'btn-success' },
+                { label: '効果 (タッチ)', note: '加点なし', val: '効果', cls: 'btn-info' },
+                { label: '失点 (吸い込み)', note: '相手チーム +1点', val: '失点', cls: 'btn-miss' }
             ],
             'サーブ': [
-                { label: '成功 (得点)', val: '成功', cls: 'btn-success' },
-                { label: '効果', val: '効果', cls: 'btn-info' },
-                { label: '失点', val: '失点', cls: 'btn-miss' }
+                { label: '成功 (エース)', note: '自チーム +1点', val: '成功', cls: 'btn-success' },
+                { label: '効果 (崩し)', note: '加点なし', val: '効果', cls: 'btn-info' },
+                { label: '失点 (アウト等)', note: '相手チーム +1点', val: '失点', cls: 'btn-miss' }
             ],
             'ディグ': [
-                { label: 'Aパス', val: 'Aパス', cls: 'btn-purple' },
-                { label: 'Bパス', val: 'Bパス', cls: 'btn-info' },
-                { label: 'Cパス', val: 'Cパス', cls: 'btn-warning' },
-                { label: '失点', val: '失点', cls: 'btn-miss' }
+                { label: 'Aパス', note: '加点なし', val: 'Aパス', cls: 'btn-purple' },
+                { label: 'Bパス', note: '加点なし', val: 'Bパス', cls: 'btn-info' },
+                { label: 'Cパス', note: '加点なし', val: 'Cパス', cls: 'btn-warning' },
+                { label: '失点', note: '相手チーム +1点', val: '失点', cls: 'btn-miss' }
             ],
             'カット': [
-                { label: 'Aパス', val: 'Aパス', cls: 'btn-purple' },
-                { label: 'Bパス', val: 'Bパス', cls: 'btn-info' },
-                { label: 'Cパス', val: 'Cパス', cls: 'btn-warning' },
-                { label: '失点', val: '失点', cls: 'btn-miss' }
+                { label: 'Aパス', note: '加点なし', val: 'Aパス', cls: 'btn-purple' },
+                { label: 'Bパス', note: '加点なし', val: 'Bパス', cls: 'btn-info' },
+                { label: 'Cパス', note: '加点なし', val: 'Cパス', cls: 'btn-warning' },
+                { label: '失点', note: '相手チーム +1点', val: '失点', cls: 'btn-miss' }
             ]
         };
 
@@ -1745,7 +1758,7 @@
             opts.forEach(o => {
                 const btn = document.createElement('button');
                 btn.className = `btn-result ${o.cls}`;
-                btn.innerText = o.label;
+                btn.innerHTML = `<span>${o.label}</span><span class="sub-note">${o.note}</span>`;
                 btn.onclick = () => saveResultLog(o.val);
                 gridDiv.appendChild(btn);
             });
@@ -1760,6 +1773,7 @@
             document.getElementById('result-buttons-area').style.display = 'none';
         }
 
+        /* アクション結果とスコアの厳密な自動連動処理 */
         function saveDirectLog(player, category, action) {
             const state = window.appState;
             if (!state.currentMatchId) return;
@@ -1772,13 +1786,25 @@
 
             let scoreAddedType = null;
             if (match) {
-                const isPointGain = (action === '成功' || action === '決定' || action === '相手ミス' || category === '相手失点');
-                const isOppGain = (category === '相手得点' || (action === '失点' && (category === 'サーブ' || category === 'スパイク' || category === '相手得点')));
+                // 自チーム加点条件: 相手失点 or 成功(スパイク/ブロック/サーブ) or 決定 or エース or 相手ミス
+                const isPointGain = (
+                    category === '相手失点' ||
+                    action === '成功' ||
+                    action === '決定' ||
+                    action === 'エース' ||
+                    action === '相手ミス'
+                );
 
-                if (category === '相手失点' || (isPointGain && category !== '相手得点')) {
+                // 相手チーム加点条件: 相手得点 or (各攻撃/守備での「失点」)
+                const isOppGain = (
+                    category === '相手得点' ||
+                    (action === '失点' && category !== '相手失点')
+                );
+
+                if (isPointGain && category !== '相手得点') {
                     match.myScore = (match.myScore || 0) + 1;
                     scoreAddedType = 'my';
-                } else if (category === '相手得点' || (action === '失点' && category === '相手得点')) {
+                } else if (isOppGain) {
                     match.oppScore = (match.oppScore || 0) + 1;
                     scoreAddedType = 'opp';
                 }
@@ -1894,7 +1920,7 @@
                 pLogs.forEach(l => {
                     if (l.category === 'スパイク' && (l.action === '成功' || l.action === '決定')) spikeKills++;
                     if (l.category === 'ブロック' && (l.action === '成功' || l.action === '決定')) blockKills++;
-                    if (l.category === 'サーブ' && (l.action === '成功' || l.action === '決定')) serveAces++;
+                    if (l.category === 'サーブ' && (l.action === '成功' || l.action === '決定' || l.action === 'エース')) serveAces++;
                     if ((l.category === 'ディグ' || l.category === 'カット') && (l.action === 'Aパス' || l.action === 'Bパス')) digGood++;
                 });
 
@@ -1946,7 +1972,7 @@
                     if (l.action === '効果' || l.action === 'タッチ') blockE++;
                     if (l.action === '失点') blockM++;
                 } else if (l.category === 'サーブ') {
-                    if (l.action === '成功' || l.action === '決定') serveS++;
+                    if (l.action === '成功' || l.action === '決定' || l.action === 'エース') serveS++;
                     if (l.action === '効果') serveE++;
                     if (l.action === '失点') serveM++;
                 } else if (l.category === 'ディグ' || l.category === 'レシーブ') {
@@ -2009,7 +2035,7 @@
                         if (l.action === '効果' || l.action === 'タッチ') blE++;
                         if (l.action === '失点') blM++;
                     } else if (l.category === 'サーブ') {
-                        if (l.action === '成功' || l.action === '決定') seS++;
+                        if (l.action === '成功' || l.action === '決定' || l.action === 'エース') seS++;
                         if (l.action === '効果') seE++;
                         if (l.action === '失点') seM++;
                     } else if (l.category === 'ディグ' || l.category === 'レシーブ') {
@@ -2335,23 +2361,23 @@
                     <div style="display:flex; gap:4px; margin-bottom:4px;">
                         <input type="text" class="text-input" id="q-label-${idx}" value="${item.label}" placeholder="表示名" />
                         <select class="text-input" id="q-cls-${idx}">
-                            <option value="type-success" ${item.cls==='type-success'?'selected':''}>緑 (自加点)</option>
-                            <option value="type-opp-miss" ${item.cls==='type-opp-miss'?'selected':''}>エメラルド (相手失点)</option>
-                            <option value="type-info" ${item.cls==='type-info'?'selected':''}>青 (効果)</option>
+                            <option value="type-opp-miss" ${item.cls==='type-opp-miss'?'selected':''}>緑/エメラルド (相手失点=自加点)</option>
+                            <option value="type-miss" ${item.cls==='type-miss'?'selected':''}>赤 (自失点=相手加点)</option>
+                            <option value="type-success" ${item.cls==='type-success'?'selected':''}>青 (アタック/エース自加点)</option>
+                            <option value="type-info" ${item.cls==='type-info'?'selected':''}>水色 (効果/継続)</option>
                             <option value="type-warning" ${item.cls==='type-warning'?'selected':''}>黄 (タッチ/Cパス)</option>
                             <option value="type-purple" ${item.cls==='type-purple'?'selected':''}>紫 (Aパス)</option>
-                            <option value="type-miss" ${item.cls==='type-miss'?'selected':''}>赤 (相手加点)</option>
                         </select>
                     </div>
                     <div style="display:flex; gap:4px;">
                         <select class="text-input" id="q-cat-${idx}">
+                            <option value="相手失点" ${item.category==='相手失点'?'selected':''}>相手失点</option>
+                            <option value="相手得点" ${item.category==='相手得点'?'selected':''}>相手得点</option>
                             <option value="スパイク" ${item.category==='スパイク'?'selected':''}>スパイク</option>
                             <option value="ブロック" ${item.category==='ブロック'?'selected':''}>ブロック</option>
                             <option value="サーブ" ${item.category==='サーブ'?'selected':''}>サーブ</option>
                             <option value="ディグ" ${item.category==='ディグ'?'selected':''}>ディグ</option>
                             <option value="カット" ${item.category==='カット'?'selected':''}>カット</option>
-                            <option value="相手失点" ${item.category==='相手失点'?'selected':''}>相手失点</option>
-                            <option value="相手得点" ${item.category==='相手得点'?'selected':''}>相手得点</option>
                         </select>
                         <input type="text" class="text-input" id="q-act-${idx}" value="${item.action}" placeholder="結果 (例: 成功)" />
                     </div>
@@ -2384,21 +2410,43 @@
             renderQuickButtons();
         }
 
+        /* 確実なフル共有URLコピー処理 */
         async function copyShareUrl() {
             if (window.pushToCloud) {
                 await window.pushToCloud();
             }
-            const currentUrl = window.location.href;
+
+            const currentRoom = window.currentRoomId || '1001';
+            const shareUrl = window.location.protocol + "//" + window.location.host + window.location.pathname + '?room=' + currentRoom;
+
             const textarea = document.getElementById('copy-textarea');
+            let copySuccess = false;
+
             if (textarea) {
-                textarea.value = currentUrl;
+                textarea.value = shareUrl;
                 textarea.select();
                 try {
-                    document.execCommand('copy');
-                    showCustomAlert(`【共有URLをコピーしました】\nこのURLを開くとリアルタイム同期されます。\n\n${currentUrl}`);
+                    copySuccess = document.execCommand('copy');
                 } catch (err) {
-                    showCustomAlert(`共有URL:\n${currentUrl}`);
+                    copySuccess = false;
                 }
+            }
+
+            if (copySuccess) {
+                showCustomAlert(`【共有URLをクリップボードにコピーしました】\n\nルーム番号: ${currentRoom}\nこのURLを他の端末で開くとリアルタイム同期されます。`);
+            } else {
+                const modal = document.getElementById('custom-dialog-modal');
+                const msgEl = document.getElementById('custom-dialog-message');
+                const btnsEl = document.getElementById('custom-dialog-buttons');
+
+                msgEl.innerHTML = `
+                    <div style="font-weight:bold; margin-bottom:6px;">【共有URL】</div>
+                    <div style="font-size:0.75rem; color:var(--primary); margin-bottom:8px; word-break:break-all; user-select:all;">${shareUrl}</div>
+                    <div style="font-size:0.7rem; color:var(--text-muted);">上のURLまたはルーム番号「${currentRoom}」を他の端末へ共有してください。</div>
+                `;
+
+                btnsEl.innerHTML = `<button class="btn-action-small" onclick="closeCustomDialog()">閉じる</button>`;
+                modal.style.display = 'flex';
             }
         }
 
@@ -2480,7 +2528,7 @@
                         if (l.action === '効果' || l.action === 'タッチ') blE++;
                         if (l.action === '失点') blM++;
                     } else if (l.category === 'サーブ') {
-                        if (l.action === '成功' || l.action === '決定') seS++;
+                        if (l.action === '成功' || l.action === '決定' || l.action === 'エース') seS++;
                         if (l.action === '効果') seE++;
                         if (l.action === '失点') seM++;
                     } else if (l.category === 'ディグ' || l.category === 'レシーブ') {
