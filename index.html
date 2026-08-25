@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <meta name="robots" content="noindex, nofollow">
     <title>バレーボール試合記録システム</title>
-
     <style>
         :root[data-theme="dark"] {
             --bg-main: #0b0f19;
@@ -54,12 +53,19 @@
             font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
             -webkit-tap-highlight-color: transparent;
             user-select: none;
+            -webkit-user-select: none;
+            -moz-user-select: none;
+        }
+
+        input, select, textarea {
+            user-select: text;
+            -webkit-user-select: text;
         }
 
         body {
             max-width: 500px;
             margin: 0 auto;
-            padding-top: 86px;
+            padding-top: 88px;
             padding-bottom: 70px;
             background-color: var(--bg-main);
             color: var(--text-main);
@@ -109,6 +115,7 @@
             display: flex;
             align-items: center;
             gap: 4px;
+            cursor: pointer;
         }
 
         .status-dot {
@@ -136,7 +143,8 @@
             gap: 3px;
         }
         .role-badge.master { background: rgba(59, 130, 246, 0.15); color: var(--primary); border: 1px solid var(--primary); }
-        .role-badge.sub { background: var(--bg-chip); color: var(--text-muted); border: 1px solid var(--border); }
+        .role-badge.sub { background: rgba(16, 185, 129, 0.15); color: var(--success); border: 1px solid var(--success); }
+        .role-badge.viewer { background: var(--bg-chip); color: var(--text-muted); border: 1px solid var(--border); }
 
         .btn-header-action {
             background: var(--bg-chip);
@@ -251,7 +259,7 @@
             display: flex;
             flex-direction: column;
             align-items: center;
-            font-size: 0.75rem;
+            font-size: 0.72rem;
             font-weight: 600;
             color: var(--text-muted);
             cursor: pointer;
@@ -286,6 +294,7 @@
 
         .step-badge.active { background: var(--primary-light); color: var(--primary); border-color: var(--primary); }
 
+        /* クイック選択エリア */
         .quick-section {
             background: var(--bg-card);
             border: 1px solid var(--border);
@@ -322,6 +331,7 @@
         .btn-quick-dark.type-warning { border-left: 3px solid var(--warning); }
         .btn-quick-dark.type-purple { border-left: 3px solid var(--purple); }
         .btn-quick-dark.type-miss { border-left: 3px solid var(--danger); }
+        .btn-quick-dark.type-opp-miss { border-left: 3px solid var(--success); }
 
         .btn-quick-dark .sub { font-size: 0.68rem; color: var(--text-muted); font-weight: normal; }
 
@@ -399,6 +409,7 @@
             cursor: pointer;
         }
 
+        /* 3列四角枠に詰めて入れる選手選択グリッド */
         .player-grid-pack {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
@@ -485,6 +496,53 @@
         .num-input { width: 50px; padding: 6px; background: var(--bg-input); border: 1px solid var(--border); border-radius: 4px; color: var(--text-main); text-align: center; outline: none; }
         .name-input { flex: 1; padding: 6px; background: var(--bg-input); border: 1px solid var(--border); border-radius: 4px; color: var(--text-main); outline: none; }
 
+        /* ランキング表 */
+        .ranking-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 8px;
+            margin-bottom: 12px;
+        }
+
+        .ranking-card {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 8px 10px;
+        }
+
+        .ranking-card-title {
+            font-size: 0.72rem;
+            font-weight: 700;
+            color: var(--primary);
+            margin-bottom: 6px;
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+
+        .ranking-item {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 0.72rem;
+            padding: 2px 0;
+            border-bottom: 1px dashed var(--border);
+        }
+        .ranking-item:last-child { border-bottom: none; }
+
+        .ranking-rank {
+            font-weight: 700;
+            width: 18px;
+            color: var(--text-muted);
+        }
+        .ranking-rank.top1 { color: #f59e0b; }
+        .ranking-rank.top2 { color: #94a3b8; }
+        .ranking-rank.top3 { color: #b45309; }
+
+        .ranking-name { flex: 1; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .ranking-val { font-weight: 700; color: var(--text-main); }
+
         .stats-grid-container { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
         .stat-card { background: var(--bg-card); border-radius: 8px; padding: 10px; border: 1px solid var(--border); }
         .stat-card-title { font-size: 0.72rem; font-weight: 600; color: var(--text-muted); margin-bottom: 6px; }
@@ -517,24 +575,56 @@
         .modal-bg {
             position: fixed; top: 0; left: 0; width: 100%; height: 100%;
             background: rgba(0,0,0,0.65); z-index: 2000; display: none;
-            align-items: center; justify-content: center;
+            align-items: center; justify-content: center; backdrop-filter: blur(2px);
         }
         .modal-box {
             background: var(--bg-card); border: 1px solid var(--border);
-            border-radius: 8px; padding: 16px; width: 90%; max-width: 420px;
+            border-radius: 10px; padding: 16px; width: 90%; max-width: 440px;
             color: var(--text-main); max-height: 90vh; overflow-y: auto;
+            box-shadow: 0 10px 25px rgba(0,0,0,0.5);
         }
 
-        .modal-actions {
-            display: flex; justify-content: flex-end; gap: 8px; margin-top: 14px;
+        .welcome-card-grid {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin-top: 12px;
+        }
+
+        .welcome-card {
+            background: var(--bg-main);
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            padding: 12px;
+        }
+
+        .welcome-card-title {
+            font-size: 0.82rem;
+            font-weight: 700;
+            color: var(--primary);
+            margin-bottom: 8px;
+            display: flex;
+            align-items: center;
+            gap: 6px;
         }
 
         #copy-textarea { position: absolute; left: -9999px; top: 0; }
     </style>
 
-    <script>
-        const BUCKET_ID = "vball_sync_2026_room_data_v3";
-        const SYNC_BASE_URL = `https://kvdb.io/${BUCKET_ID}/`;
+    <script type="module">
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
+        import { getAuth, signInAnonymously, signInWithCustomToken } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
+        import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
+
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'vball-system-app';
+        const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {
+            apiKey: "",
+            authDomain: "placeholder.firebaseapp.com",
+            projectId: "placeholder",
+            storageBucket: "placeholder.appspot.com",
+            messagingSenderId: "000000000000",
+            appId: "1:000000000000:web:000000000000"
+        };
 
         function getDeviceId() {
             let id = localStorage.getItem('vball_device_id');
@@ -545,22 +635,15 @@
             return id;
         }
 
-        function getRoomId() {
+        function getInitialRoomId() {
             const urlParams = new URLSearchParams(window.location.search);
             let room = urlParams.get('room');
-            if (!room) {
-                room = Math.random().toString(36).substring(2, 8);
-                const newUrl = window.location.protocol + "//" + window.location.host + window.location.pathname + '?room=' + room;
-                window.history.replaceState({ path: newUrl }, '', newUrl);
-            }
-            return room;
+            return room || null;
         }
 
         const myDeviceId = getDeviceId();
-        const roomId = getRoomId();
-        const LOCAL_KEY = `vball_local_data_${roomId}`;
+        let currentRoomId = getInitialRoomId() || localStorage.getItem('vball_last_room') || '1001';
 
-        // 提供いただいた14名の選手データ
         const defaultPlayers = [
             { num: "1", name: "八木 春馬" },
             { num: "2", name: "大石 崚仁" },
@@ -578,28 +661,47 @@
             { num: "14", name: "吉野 颯人" }
         ];
 
-        function loadLocalData() {
-            const saved = localStorage.getItem(LOCAL_KEY);
+        function loadLocalData(roomId) {
+            const saved = localStorage.getItem(`vball_data_room_${roomId}`);
             if (saved) {
                 try { return JSON.parse(saved); } catch(e){}
             }
             return {
+                roomId: roomId,
                 matches: [],
                 logs: [],
                 players: defaultPlayers,
                 currentMatchId: null,
                 masterDeviceId: myDeviceId,
                 masterPassword: "1234",
+                subPassword: "1234",
+                subDeviceIds: [],
                 allowSubOfflineOverwrite: true,
                 updatedAt: Date.now()
             };
         }
 
-        window.appState = loadLocalData();
+        window.appState = loadLocalData(currentRoomId);
+        window.myDeviceId = myDeviceId;
+        window.currentRoomId = currentRoomId;
+
+        function getRole() {
+            if (window.appState.masterDeviceId === myDeviceId) return 'master';
+            if (window.appState.subDeviceIds && window.appState.subDeviceIds.includes(myDeviceId)) return 'sub';
+            return 'viewer';
+        }
+        window.getRole = getRole;
 
         function isMaster() {
-            return window.appState.masterDeviceId === myDeviceId;
+            return getRole() === 'master';
         }
+        window.isMaster = isMaster;
+
+        function canRecord() {
+            const r = getRole();
+            return r === 'master' || r === 'sub';
+        }
+        window.canRecord = canRecord;
 
         function updateSyncBadge(status) {
             const statusBadge = document.getElementById('status-badge-text');
@@ -607,107 +709,180 @@
 
             if (statusBadge) {
                 if (status === 'online') {
-                    statusBadge.innerHTML = `<span class="status-dot"></span>同期中 (${roomId})`;
+                    statusBadge.innerHTML = `<span class="status-dot"></span>Rm: ${window.currentRoomId}`;
                     statusBadge.className = 'status-badge online';
                 } else if (status === 'connecting') {
                     statusBadge.innerHTML = `<span class="status-dot"></span>接続中...`;
                     statusBadge.className = 'status-badge connecting';
                 } else {
-                    statusBadge.innerHTML = `<span class="status-dot"></span>ローカル保存`;
+                    statusBadge.innerHTML = `<span class="status-dot"></span>オフライン`;
                     statusBadge.className = 'status-badge offline';
                 }
             }
 
             if (roleBadge) {
-                if (isMaster()) {
-                    roleBadge.innerHTML = `
-                        <svg class="icon-svg" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg>
-                        マスター
-                    `;
+                const role = getRole();
+                if (role === 'master') {
+                    roleBadge.innerHTML = `<svg class="icon-svg" viewBox="0 0 24 24"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"></polygon></svg> マスター`;
                     roleBadge.className = 'role-badge master';
-                } else {
-                    roleBadge.innerHTML = `
-                        <svg class="icon-svg" viewBox="0 0 24 24"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"></rect><line x1="12" y1="18" x2="12.01" y2="18"></line></svg>
-                        サブ
-                    `;
+                } else if (role === 'sub') {
+                    roleBadge.innerHTML = `<svg class="icon-svg" viewBox="0 0 24 24"><rect x="5" y="2" width="14" height="20" rx="2" ry="2"></rect><line x1="12" y1="18" x2="12.01" y2="18"></line></svg> サブ(記録者)`;
                     roleBadge.className = 'role-badge sub';
+                } else {
+                    roleBadge.innerHTML = `<svg class="icon-svg" viewBox="0 0 24 24"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path><circle cx="12" cy="12" r="3"></circle></svg> 閲覧者`;
+                    roleBadge.className = 'role-badge viewer';
                 }
             }
+        }
+        window.updateSyncBadge = updateSyncBadge;
+
+        let db = null;
+        let auth = null;
+        let roomDocRef = null;
+        let unsubscribeSync = null;
+        let isPushing = false;
+
+        async function connectRoom(roomIdToConnect) {
+            window.currentRoomId = roomIdToConnect;
+            localStorage.setItem('vball_last_room', roomIdToConnect);
+            window.appState = loadLocalData(roomIdToConnect);
+
+            const txtRoomId = document.getElementById('txt-room-id');
+            if (txtRoomId) txtRoomId.innerText = roomIdToConnect;
+
+            const newUrl = window.location.protocol + "//" + window.location.host + window.location.pathname + '?room=' + roomIdToConnect;
+            window.history.replaceState({ path: newUrl }, '', newUrl);
+
+            if (unsubscribeSync) unsubscribeSync();
+
+            updateSyncBadge('connecting');
+
+            if (db && auth) {
+                setupSnapshotListener();
+            }
+        }
+        window.connectRoom = connectRoom;
+
+        async function initFirebaseSync() {
+            updateSyncBadge('connecting');
+            try {
+                const app = initializeApp(firebaseConfig);
+                auth = getAuth(app);
+                db = getFirestore(app);
+
+                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                    await signInWithCustomToken(auth, __initial_auth_token);
+                } else {
+                    await signInAnonymously(auth);
+                }
+
+                setupSnapshotListener();
+
+            } catch (err) {
+                console.error("Firebase Sync Error:", err);
+                updateSyncBadge('offline');
+            }
+        }
+
+        function setupSnapshotListener() {
+            roomDocRef = doc(db, 'artifacts', appId, 'public', 'data', 'rooms', window.currentRoomId);
+
+            unsubscribeSync = onSnapshot(roomDocRef, (docSnap) => {
+                if (isPushing) return;
+
+                if (docSnap.exists()) {
+                    const remoteData = docSnap.data();
+                    if (remoteData && remoteData.updatedAt && remoteData.updatedAt > window.appState.updatedAt) {
+                        window.appState = remoteData;
+                        localStorage.setItem(`vball_data_room_${window.currentRoomId}`, JSON.stringify(window.appState));
+                        if (window.renderAllUI) window.renderAllUI();
+                    }
+                    updateSyncBadge('online');
+                } else {
+                    pushToCloud();
+                }
+            }, (error) => {
+                console.warn("Firestore notification:", error);
+                updateSyncBadge('offline');
+            });
         }
 
         async function pushToCloud() {
             window.appState.updatedAt = Date.now();
-            localStorage.setItem(LOCAL_KEY, JSON.stringify(window.appState));
+            localStorage.setItem(`vball_data_room_${window.currentRoomId}`, JSON.stringify(window.appState));
 
-            try {
-                await fetch(SYNC_BASE_URL + roomId, {
-                    method: 'POST',
-                    body: JSON.stringify(window.appState)
-                });
-                updateSyncBadge('online');
-            } catch (err) {
-                updateSyncBadge('offline');
-            }
-        }
-
-        async function pullFromCloud() {
-            try {
-                const res = await fetch(SYNC_BASE_URL + roomId);
-                if (res.ok) {
-                    const remoteData = await res.json();
-                    if (remoteData && remoteData.updatedAt) {
-                        let shouldUpdate = false;
-
-                        if (isMaster()) {
-                            if (remoteData.updatedAt > window.appState.updatedAt) {
-                                if (remoteData.masterDeviceId === myDeviceId) {
-                                    shouldUpdate = true;
-                                } else if (window.appState.allowSubOfflineOverwrite) {
-                                    window.appState.logs = remoteData.logs || [];
-                                    window.appState.updatedAt = remoteData.updatedAt;
-                                    shouldUpdate = true;
-                                }
-                            }
-                        } else {
-                            if (remoteData.updatedAt > window.appState.updatedAt) {
-                                shouldUpdate = true;
-                            }
-                        }
-
-                        if (shouldUpdate) {
-                            window.appState = remoteData;
-                            localStorage.setItem(LOCAL_KEY, JSON.stringify(window.appState));
-                            if (window.renderAllUI) window.renderAllUI();
-                        }
-                    }
+            if (roomDocRef && auth && auth.currentUser) {
+                isPushing = true;
+                try {
+                    const cleanPayload = JSON.parse(JSON.stringify(window.appState));
+                    await setDoc(roomDocRef, cleanPayload);
                     updateSyncBadge('online');
+                } catch (err) {
+                    console.error("Error pushing to cloud:", err);
+                    updateSyncBadge('offline');
+                } finally {
+                    setTimeout(() => { isPushing = false; }, 300);
                 }
-            } catch (err) {
+            } else {
                 updateSyncBadge('offline');
             }
         }
 
-        function initSyncLoop() {
-            updateSyncBadge('connecting');
-            pullFromCloud();
-            setInterval(pullFromCloud, 1500);
-        }
-
-        window.initSyncLoop = initSyncLoop;
         window.pushToCloud = pushToCloud;
-        window.isMaster = isMaster;
+        window.initFirebaseSync = initFirebaseSync;
     </script>
 </head>
 <body>
+
+    <!-- 0. 初期訪問 / ルーム選択・作成 モーダル -->
+    <div class="modal-bg" id="welcome-room-modal" style="display: none; z-index: 3000;">
+        <div class="modal-box" style="max-width: 460px;">
+            <div class="section-title" style="font-size:0.9rem; justify-content: space-between;">
+                <span>🏐 バレーボール試合記録システム</span>
+                <button class="btn-delete-small" id="welcome-modal-close-btn" onclick="closeRoomWelcomeModal()" style="display:none;">✕ 閉じる</button>
+            </div>
+            <div style="font-size: 0.73rem; color: var(--text-muted); margin-top: 4px;">
+                新規でルームを作成するか、既存のルーム番号を入力して入室してください。
+            </div>
+
+            <div class="welcome-card-grid">
+                <!-- 新規ルーム作成 -->
+                <div class="welcome-card">
+                    <div class="welcome-card-title">
+                        <svg class="icon-svg" viewBox="0 0 24 24"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                        新しいルームを作成 (マスター)
+                    </div>
+                    <div style="display:flex; flex-direction:column; gap:6px;">
+                        <input type="text" id="welcome-create-room-id" class="text-input" placeholder="ルーム番号 (例: 2026)" />
+                        <input type="password" id="welcome-create-pass" class="text-input" placeholder="マスター/サブ共通パスワード (任意 / 初期: 1234)" value="1234" />
+                        <button class="btn-action-small" onclick="handleWelcomeCreateRoom()" style="padding: 8px; margin-top:2px;">✨ このルームを作成して入室</button>
+                    </div>
+                </div>
+
+                <!-- 既存ルームに入室 -->
+                <div class="welcome-card">
+                    <div class="welcome-card-title" style="color: var(--success);">
+                        <svg class="icon-svg" viewBox="0 0 24 24"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"></path><polyline points="10 17 15 12 10 7"></polyline><line x1="15" y1="12" x2="3" y2="12"></line></svg>
+                        既存のルームに入室 (閲覧 / 記録)
+                    </div>
+                    <div style="display:flex; flex-direction:column; gap:6px;">
+                        <input type="text" id="welcome-join-room-id" class="text-input" placeholder="入室するルーム番号" />
+                        <input type="password" id="welcome-join-pass" class="text-input" placeholder="パスワード (空欄で閲覧者モード、入力で記録者)" />
+                        <button class="btn-action-small" onclick="handleWelcomeJoinRoom()" style="background: var(--success); padding: 8px; margin-top:2px;">🚪 ルームに入室</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 
     <!-- 1. 最上部固定ヘッダー -->
     <div class="fixed-header">
         <div class="header-top-row">
             <span id="header-date">----/--/-- --:--</span>
             <div style="display:flex; gap:4px; align-items:center;">
-                <span class="status-badge connecting" id="status-badge-text"><span class="status-dot"></span>接続中...</span>
-                <span class="role-badge sub" id="role-badge-text" onclick="handleRoleSwitchClick()" title="クリックでマスター権限を引き継ぎ">サブ</span>
-                <button class="btn-header-action" onclick="copyShareUrl()" title="共有リンクを発行">
+                <span class="status-badge connecting" id="status-badge-text" onclick="openRoomWelcomeModal()" title="クリックでルーム切り替え"><span class="status-dot"></span>接続中...</span>
+                <span class="role-badge viewer" id="role-badge-text" onclick="handleRoleSwitchClick()" title="クリックで権限切り替え">閲覧者</span>
+                <button class="btn-header-action" onclick="copyShareUrl()" title="共有">
                     <svg class="icon-svg" viewBox="0 0 24 24"><path d="M10 13a5 5 0 0 0 7.54.54l3-3a5 5 0 0 0-7.07-7.07l-1.72 1.71"></path><path d="M14 11a5 5 0 0 0-7.54-.54l-3 3a5 5 0 0 0 7.07 7.07l1.71-1.71"></path></svg>
                     共有
                 </button>
@@ -758,14 +933,14 @@
     <div id="tab1-view">
         <div class="card-section">
             <div class="section-title">
-                <span>1. 試合を選択 (マスター限定)</span>
+                <span>1. 試合作成・選択 (マスター限定)</span>
                 <span class="step-badge" id="tag-step1">要選択</span>
             </div>
 
             <div class="match-create-box">
                 <div class="match-input-row">
                     <input type="text" id="new-opponent" class="text-input" placeholder="対戦相手 (例: 東京第一)" />
-                    <button class="btn-action-small" id="btn-create-match" onclick="handleCreateMatch()">＋ 試合作成</button>
+                    <button class="btn-action-small" id="btn-create-match" onclick="handleCreateMatch()">＋ このルームに試合作成</button>
                 </div>
                 <div class="match-input-row">
                     <input type="date" id="new-date" class="text-input" />
@@ -776,6 +951,7 @@
             <div id="match-cards-list"></div>
         </div>
 
+        <!-- クイック選択エリア -->
         <div class="card-section">
             <div class="quick-section">
                 <div class="section-title" style="margin-bottom:0;">
@@ -789,6 +965,7 @@
             </div>
         </div>
 
+        <!-- 選手選択（3列四角枠 ＋ 長押し並び替え機能付き） -->
         <div class="card-section">
             <div class="section-title">
                 <span>2. 選手を選択 (任意 / 長押しで並び替え)</span>
@@ -797,6 +974,7 @@
             <div class="player-grid-pack" id="player-grid-list"></div>
         </div>
 
+        <!-- プレー選択 -->
         <div class="card-section">
             <div class="section-title">
                 <span>3. プレーを選択</span>
@@ -819,48 +997,45 @@
             <button class="btn-undo" onclick="undoLastLog()">取り消す</button>
         </div>
 
+        <!-- 直近の記録 -->
         <div class="card-section">
             <div class="section-title">直近の記録 (時系列)</div>
             <div class="log-container" id="tab1-log-list">記録はありません</div>
         </div>
     </div>
 
-    <!-- 3. タブ2: 集計・管理 -->
+    <!-- 3. タブ2: 集計画面 (ランキング＋集計) -->
     <div id="tab2-view" style="display: none;">
-        <div class="card-section">
-            <div class="section-title">選手登録・管理</div>
-            <div class="register-card">
-                <div class="register-form">
-                    <input type="text" id="reg-num" class="num-input" placeholder="#" value="15" />
-                    <input type="text" id="reg-name" class="name-input" placeholder="選手名" />
-                    <button class="btn-action-small" onclick="addNewPlayer()">＋ 登録</button>
-                </div>
-                <div class="player-grid-pack" id="registered-player-chips"></div>
-            </div>
-        </div>
-
+        <!-- ランキング表 -->
         <div class="card-section">
             <div class="section-title">
-                <span>全選手個人票 (確率・成績パラメータ一覧)</span>
+                <span>カテゴリー別 選手ランキング</span>
             </div>
-            <div class="table-responsive">
-                <table class="data-table">
-                    <thead>
-                        <tr>
-                            <th>選手名</th>
-                            <th>スパイク決定率</th>
-                            <th>スパイク (成功/効果/失点)</th>
-                            <th>ブロック (成功/効果/失点)</th>
-                            <th>サーブ (成功/効果/失点)</th>
-                            <th>ディグ (A/B/C)</th>
-                            <th>カット (A/B/C)</th>
-                        </tr>
-                    </thead>
-                    <tbody id="all-player-stats-table-body"></tbody>
-                </table>
+            <div class="ranking-grid">
+                <!-- アタック王 -->
+                <div class="ranking-card">
+                    <div class="ranking-card-title">🏐 アタック得点王</div>
+                    <div id="rk-spike-body"></div>
+                </div>
+                <!-- ブロック王 -->
+                <div class="ranking-card">
+                    <div class="ranking-card-title">🛡️ ブロック得点王</div>
+                    <div id="rk-block-body"></div>
+                </div>
+                <!-- エース王 -->
+                <div class="ranking-card">
+                    <div class="ranking-card-title">⚡ サービスエース王</div>
+                    <div id="rk-serve-body"></div>
+                </div>
+                <!-- レシーブ王 -->
+                <div class="ranking-card">
+                    <div class="ranking-card-title">🤲 ディグ・カット王</div>
+                    <div id="rk-dig-body"></div>
+                </div>
             </div>
         </div>
 
+        <!-- チーム集計 -->
         <div class="card-section">
             <div class="section-title">
                 <span>チーム集計</span>
@@ -912,27 +1087,74 @@
             </div>
         </div>
 
+        <!-- 全選手個人票一覧 -->
         <div class="card-section">
-            <div class="section-title">時系列 試合経過ログ</div>
+            <div class="section-title">
+                <span>全選手個人票 (確率・成績パラメータ一覧)</span>
+            </div>
+            <div class="table-responsive">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>選手名</th>
+                            <th>スパイク決定率</th>
+                            <th>スパイク (成功/効果/失点)</th>
+                            <th>ブロック (成功/効果/失点)</th>
+                            <th>サーブ (成功/効果/失点)</th>
+                            <th>ディグ (A/B/C)</th>
+                            <th>カット (A/B/C)</th>
+                        </tr>
+                    </thead>
+                    <tbody id="all-player-stats-table-body"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <!-- 4. タブ3: 管理画面 -->
+    <div id="tab3-view" style="display: none;">
+        <div class="card-section">
+            <div class="section-title">ルーム共有・接続設定</div>
+            <div class="register-card">
+                <div style="font-size:0.75rem; color:var(--text-muted); margin-bottom:8px; display:flex; justify-content:space-between; align-items:center;">
+                    <span>現在のルーム番号: <strong style="color:var(--primary); font-size:0.9rem;" id="txt-room-id">1001</strong></span>
+                    <button class="btn-action-small" onclick="openRoomWelcomeModal()" style="font-size:0.68rem; padding:3px 8px;">ルーム作成/切替</button>
+                </div>
+                <div style="font-size:0.7rem; color:var(--text-muted);">
+                    ※同じルーム番号を入力することで、他の端末から閲覧・記録が可能です。
+                </div>
+            </div>
+        </div>
+
+        <div class="card-section">
+            <div class="section-title">選手登録・管理 (マスター限定)</div>
+            <div class="register-card">
+                <div class="register-form">
+                    <input type="text" id="reg-num" class="num-input" placeholder="#" value="15" />
+                    <input type="text" id="reg-name" class="name-input" placeholder="選手名" />
+                    <button class="btn-action-small" onclick="addNewPlayer()">＋ 登録</button>
+                </div>
+                <div class="player-grid-pack" id="registered-player-chips"></div>
+            </div>
+        </div>
+
+        <div class="card-section">
+            <div class="section-title">全時系列ログ・管理</div>
             <div class="log-container" id="log-list">記録はありません</div>
             
             <button class="btn-export" onclick="exportCSV()">📄 最終得点つきCSV出力 (クロス集計表含む)</button>
             
             <div style="margin-top:12px; background:var(--bg-card); border:1px solid var(--border); padding:10px; border-radius:6px; font-size:0.75rem;">
                 <div style="font-weight:bold; margin-bottom:6px;">マスター端末コントロール</div>
-                <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:6px;">
-                    <span>サブ端末オフライン記録の自動承認:</span>
-                    <button class="btn-action-small" id="btn-toggle-sub-overwrite" onclick="toggleSubOverwriteSetting()">許可 (ON)</button>
-                </div>
-                <button class="btn-config-toggle" onclick="openEditLogModal('first')" style="margin-top:4px;">✏ ログ記録を選択して直接編集</button>
-                <button class="btn-config-toggle" onclick="openMasterPasswordModal()" style="margin-top:4px;">🔑 マスターパスワード変更</button>
+                <button class="btn-config-toggle" onclick="openEditLogModal('first')" style="margin-top:2px;">✏ ログ記録を選択して直接編集</button><br>
+                <button class="btn-config-toggle" onclick="openMasterPasswordModal()" style="margin-top:6px;">🔑 ルームパスワード変更</button>
             </div>
 
-            <button class="btn-reset-danger" onclick="resetAllData()">🗑 ルームデータ初期化</button>
+            <button class="btn-reset-danger" onclick="resetAllData()">🗑 このルームのデータを初期化</button>
         </div>
     </div>
 
-    <!-- 4. ボトムナビ -->
+    <!-- 5. ボトムナビ -->
     <div class="bottom-nav">
         <button class="nav-item active" id="btn-nav-1" onclick="switchTab(1)">
             <svg class="icon-svg" style="width:18px; height:18px;" viewBox="0 0 24 24"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line></svg>
@@ -940,7 +1162,11 @@
         </button>
         <button class="nav-item" id="btn-nav-2" onclick="switchTab(2)">
             <svg class="icon-svg" style="width:18px; height:18px;" viewBox="0 0 24 24"><line x1="18" y1="20" x2="18" y2="10"></line><line x1="12" y1="20" x2="12" y2="4"></line><line x1="6" y1="20" x2="6" y2="14"></line></svg>
-            <span>集計・管理</span>
+            <span>集計</span>
+        </button>
+        <button class="nav-item" id="btn-nav-3" onclick="switchTab(3)">
+            <svg class="icon-svg" style="width:18px; height:18px;" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+            <span>管理</span>
         </button>
     </div>
 
@@ -981,6 +1207,8 @@
                             <option value="サーブ">サーブ</option>
                             <option value="ディグ">ディグ</option>
                             <option value="カット">カット</option>
+                            <option value="相手失点">相手失点</option>
+                            <option value="相手得点">相手得点</option>
                         </select>
                     </div>
                     <div style="flex:1;">
@@ -993,95 +1221,62 @@
         </div>
     </div>
 
-    <!-- アラート通知用カスタムモーダル -->
-    <div class="modal-bg" id="custom-alert-modal">
-        <div class="modal-box">
-            <div class="section-title"><span>通知</span></div>
-            <div id="custom-alert-msg" style="font-size:0.8rem; margin-top:8px; line-height:1.4;"></div>
-            <div class="modal-actions">
-                <button class="btn-action-small" onclick="closeCustomAlert()">OK</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- 確認用カスタムモーダル (confirmの代替) -->
-    <div class="modal-bg" id="custom-confirm-modal">
-        <div class="modal-box">
-            <div class="section-title"><span>確認</span></div>
-            <div id="custom-confirm-msg" style="font-size:0.8rem; margin-top:8px; line-height:1.4;"></div>
-            <div class="modal-actions">
-                <button class="btn-delete-small" onclick="closeCustomConfirm(false)">キャンセル</button>
-                <button class="btn-action-small" onclick="closeCustomConfirm(true)">OK</button>
-            </div>
-        </div>
-    </div>
-
-    <!-- 入力用カスタムモーダル (promptの代替) -->
-    <div class="modal-bg" id="custom-prompt-modal">
-        <div class="modal-box">
-            <div class="section-title"><span id="custom-prompt-title">入力</span></div>
-            <div style="margin-top:8px;">
-                <input type="text" id="custom-prompt-input" class="text-input" style="width:100%;" />
-            </div>
-            <div class="modal-actions">
-                <button class="btn-delete-small" onclick="closeCustomPrompt(null)">キャンセル</button>
-                <button class="btn-action-small" onclick="closeCustomPrompt(document.getElementById('custom-prompt-input').value)">確定</button>
-            </div>
+    <!-- カスタム通知・確認ダイアログ (alert/confirm代替) -->
+    <div class="modal-bg" id="custom-dialog-modal" style="z-index: 4000;">
+        <div class="modal-box" style="max-width: 360px; text-align: center;">
+            <div id="custom-dialog-message" style="margin-bottom: 14px; font-size: 0.85rem; font-weight: 600; line-height: 1.4;"></div>
+            <div style="display: flex; justify-content: center; gap: 8px;" id="custom-dialog-buttons"></div>
         </div>
     </div>
 
     <textarea id="copy-textarea"></textarea>
 
     <script>
-        // カスタムモーダル処理（alert / confirm / prompt の完全代替）
-        function showCustomAlert(msg) {
-            document.getElementById('custom-alert-msg').innerText = msg;
-            document.getElementById('custom-alert-modal').style.display = 'flex';
-        }
-        function closeCustomAlert() {
-            document.getElementById('custom-alert-modal').style.display = 'none';
-        }
-
-        let confirmCallback = null;
-        function showCustomConfirm(msg, callback) {
-            confirmCallback = callback;
-            document.getElementById('custom-confirm-msg').innerText = msg;
-            document.getElementById('custom-confirm-modal').style.display = 'flex';
-        }
-        function closeCustomConfirm(result) {
-            document.getElementById('custom-confirm-modal').style.display = 'none';
-            if (confirmCallback) confirmCallback(result);
-            confirmCallback = null;
-        }
-
-        let promptCallback = null;
-        function showCustomPrompt(title, defaultVal, callback) {
-            promptCallback = callback;
-            document.getElementById('custom-prompt-title').innerText = title;
-            document.getElementById('custom-prompt-input').value = defaultVal || '';
-            document.getElementById('custom-prompt-modal').style.display = 'flex';
-        }
-        function closeCustomPrompt(val) {
-            document.getElementById('custom-prompt-modal').style.display = 'none';
-            if (promptCallback) promptCallback(val);
-            promptCallback = null;
-        }
-
         let selectedPlayer = null;
         let selectedAction = null;
         let currentStatsSet = 'ALL';
         let lastLogId = null;
 
         const KEY_THEME = "vball_theme_setting";
-        const KEY_QUICK_CONFIG = "vball_quick_config_device_v3";
+        const KEY_QUICK_CONFIG = "vball_quick_config_device_v4";
         const KEY_PLAYER_ORDER = "vball_player_order_device_v2";
 
         const DEFAULT_QUICK_CONFIG = [
             { label: 'スパイク成功', player: '指定なし', category: 'スパイク', action: '成功', cls: 'type-success' },
+            { label: '相手失点 (自加点)', player: '指定なし', category: '相手失点', action: '相手ミス', cls: 'type-opp-miss' },
+            { label: '相手得点 (相手加点)', player: '指定なし', category: '相手得点', action: '失点', cls: 'type-miss' },
             { label: 'サーブ効果', player: '指定なし', category: 'サーブ', action: '効果', cls: 'type-info' },
-            { label: 'カット Aパス', player: '指定なし', category: 'カット', action: 'Aパス', cls: 'type-purple' },
-            { label: 'サーブ失点', player: '指定なし', category: 'サーブ', action: '失点', cls: 'type-miss' }
+            { label: 'カット Aパス', player: '指定なし', category: 'カット', action: 'Aパス', cls: 'type-purple' }
         ];
+
+        function showCustomAlert(msg) {
+            const modal = document.getElementById('custom-dialog-modal');
+            const msgEl = document.getElementById('custom-dialog-message');
+            const btnsEl = document.getElementById('custom-dialog-buttons');
+            msgEl.innerText = msg;
+            btnsEl.innerHTML = `<button class="btn-action-small" onclick="closeCustomDialog()">OK</button>`;
+            modal.style.display = 'flex';
+        }
+
+        function showCustomConfirm(msg, onConfirm) {
+            const modal = document.getElementById('custom-dialog-modal');
+            const msgEl = document.getElementById('custom-dialog-message');
+            const btnsEl = document.getElementById('custom-dialog-buttons');
+            msgEl.innerText = msg;
+            btnsEl.innerHTML = `
+                <button class="btn-delete-small" style="padding:6px 14px;" onclick="closeCustomDialog()">キャンセル</button>
+                <button class="btn-action-small" style="background:var(--danger);" id="custom-confirm-yes-btn">実行する</button>
+            `;
+            modal.style.display = 'flex';
+            document.getElementById('custom-confirm-yes-btn').onclick = () => {
+                closeCustomDialog();
+                if (onConfirm) onConfirm();
+            };
+        }
+
+        function closeCustomDialog() {
+            document.getElementById('custom-dialog-modal').style.display = 'none';
+        }
 
         function getDeviceQuickConfig() {
             const saved = localStorage.getItem(KEY_QUICK_CONFIG);
@@ -1156,14 +1351,10 @@
             renderPlayerGrid(state.players || []);
             renderRegisteredPlayers(state.players || []);
             updateStepAndButtons(currentMatch);
+            renderRankings();
             renderStats();
             renderAllPlayerStatsTable();
             renderLogs();
-
-            const btnSubOverwrite = document.getElementById('btn-toggle-sub-overwrite');
-            if (btnSubOverwrite) {
-                btnSubOverwrite.innerText = state.allowSubOfflineOverwrite ? '許可 (ON)' : 'ブロック (OFF)';
-            }
         };
 
         function updateHeaderInfo(match) {
@@ -1195,7 +1386,7 @@
             container.innerHTML = '';
 
             if (matches.length === 0) {
-                container.innerHTML = `<div class="empty-notice">試合データがありません。<br>上のフォームから作成してください。</div>`;
+                container.innerHTML = `<div class="empty-notice">このルームに試合データがありません。<br>上のフォームから試合作成してください。</div>`;
                 return;
             }
 
@@ -1210,7 +1401,7 @@
                             <div class="match-title">vs ${m.opponent} ${isSelected ? '<span style="font-size:0.7rem; color:var(--primary); margin-left:4px;">(選択中)</span>' : ''}</div>
                             <div class="match-meta">${m.date}</div>
                         </div>
-                        ${isMaster() ? `<button class="btn-delete-small" onclick="handleDeleteMatch('${m.id}', event)">削除</button>` : ''}
+                        ${window.isMaster() ? `<button class="btn-delete-small" onclick="handleDeleteMatch('${m.id}', event)">削除</button>` : ''}
                     </div>
                     <div class="match-scores-history">
                         第${m.currentSet || 1}セット: 自 <span style="font-weight:bold; color:var(--primary);">${m.myScore || 0}</span> - <span style="font-weight:bold; color:var(--danger);">${m.oppScore || 0}</span> 相手
@@ -1241,6 +1432,10 @@
                     <span class="sub">${item.player !== '指定なし' ? item.player : ''}</span>
                 `;
                 btn.onclick = () => {
+                    if (!window.canRecord()) {
+                        showCustomAlert("記録操作権限がありません。マスターまたはサブ権限で入室してください。");
+                        return;
+                    }
                     if (!window.appState.currentMatchId) {
                         showCustomAlert('先に試合を選択してください');
                         return;
@@ -1263,8 +1458,7 @@
 
             const btnCreate = document.getElementById('btn-create-match');
             if (btnCreate) {
-                btnCreate.disabled = !isMaster();
-                btnCreate.title = isMaster() ? "試合作成" : "マスター端末のみ試合作成可能";
+                btnCreate.disabled = !window.isMaster();
             }
 
             const playButtons = [
@@ -1286,7 +1480,7 @@
             }
 
             if (tag1) { tag1.innerText = '選択済'; tag1.className = 'step-badge'; }
-            playButtons.forEach(b => { if(b) b.disabled = false; });
+            playButtons.forEach(b => { if(b) b.disabled = !window.canRecord(); });
 
             if (!selectedPlayer) {
                 if (tag2) { tag2.innerText = '指定なし'; tag2.className = 'step-badge'; }
@@ -1314,8 +1508,8 @@
         }
 
         function updateScore(team, val) {
-            if (!isMaster()) {
-                showCustomAlert("スコアの直接変更は【マスター端末】からのみ行えます。");
+            if (!window.canRecord()) {
+                showCustomAlert("スコアの直接変更は【マスター/サブ記録者】のみ行えます。");
                 return;
             }
             const state = window.appState;
@@ -1334,8 +1528,8 @@
         }
 
         function onChangeCurrentSet() {
-            if (!isMaster()) {
-                showCustomAlert("セット変更は【マスター端末】からのみ行えます。");
+            if (!window.canRecord()) {
+                showCustomAlert("セット変更は【マスター/サブ記録者】のみ行えます。");
                 renderAllUI();
                 return;
             }
@@ -1350,8 +1544,8 @@
         }
 
         function handleCreateMatch() {
-            if (!isMaster()) {
-                showCustomAlert("試合作成は【マスター端末】からのみ行えます。ヘッダーの「サブ」バッジを押してパスワードを入力し、マスター権限を引き継いでください。");
+            if (!window.isMaster()) {
+                showCustomAlert("試合作成は【マスター端末】からのみ行えます。ヘッダーの「権限」バッジを押してパスワードを入力してください。");
                 return;
             }
 
@@ -1397,12 +1591,11 @@
 
         function handleDeleteMatch(id, event) {
             if (event) event.stopPropagation();
-            if (!isMaster()) {
+            if (!window.isMaster()) {
                 showCustomAlert("試合の削除は【マスター端末】のみ行えます。");
                 return;
             }
-            showCustomConfirm('この試合と全記録データを削除しますか？', (yes) => {
-                if (!yes) return;
+            showCustomConfirm('この試合と関連する全記録ログを削除しますか？', () => {
                 window.appState.matches = window.appState.matches.filter(m => m.id !== id);
                 window.appState.logs = window.appState.logs.filter(l => l.matchId !== id);
 
@@ -1486,7 +1679,7 @@
                         chip.classList.add('dragging');
                         draggedNum = p.num;
                         if (navigator.vibrate) navigator.vibrate(40);
-                    }, 400);
+                    }, 350);
                 };
 
                 chip.ontouchend = (e) => {
@@ -1529,6 +1722,10 @@
         }
 
         function onSelectAction(actName) {
+            if (!window.canRecord()) {
+                showCustomAlert("記録操作権限がありません。マスターまたはサブ権限で入室してください。");
+                return;
+            }
             if (!window.appState.currentMatchId) {
                 showCustomAlert('先に試合を選択してください');
                 return;
@@ -1573,6 +1770,20 @@
             const now = new Date();
             const timeStr = now.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' });
 
+            let scoreAddedType = null;
+            if (match) {
+                const isPointGain = (action === '成功' || action === '決定' || action === '相手ミス' || category === '相手失点');
+                const isOppGain = (category === '相手得点' || (action === '失点' && (category === 'サーブ' || category === 'スパイク' || category === '相手得点')));
+
+                if (category === '相手失点' || (isPointGain && category !== '相手得点')) {
+                    match.myScore = (match.myScore || 0) + 1;
+                    scoreAddedType = 'my';
+                } else if (category === '相手得点' || (action === '失点' && category === '相手得点')) {
+                    match.oppScore = (match.oppScore || 0) + 1;
+                    scoreAddedType = 'opp';
+                }
+            }
+
             const log = {
                 id: Date.now(),
                 matchId: state.currentMatchId,
@@ -1580,7 +1791,8 @@
                 player: player,
                 category: category,
                 action: action,
-                time: timeStr
+                time: timeStr,
+                scoreAddedType: scoreAddedType
             };
 
             state.logs.unshift(log);
@@ -1594,14 +1806,24 @@
 
         function undoLastLog() {
             if (!lastLogId) return;
-            window.appState.logs = window.appState.logs.filter(l => l.id !== lastLogId);
+            deleteLog(lastLogId);
             lastLogId = null;
             document.getElementById('toast-undo').style.display = 'none';
-            commitState();
         }
 
         function deleteLog(id) {
-            window.appState.logs = window.appState.logs.filter(l => l.id !== id);
+            const state = window.appState;
+            const targetLog = (state.logs || []).find(l => l.id === id);
+
+            if (targetLog && targetLog.scoreAddedType && state.currentMatchId) {
+                const match = state.matches.find(m => m.id === state.currentMatchId);
+                if (match) {
+                    if (targetLog.scoreAddedType === 'my') match.myScore = Math.max(0, (match.myScore || 0) - 1);
+                    if (targetLog.scoreAddedType === 'opp') match.oppScore = Math.max(0, (match.oppScore || 0) - 1);
+                }
+            }
+
+            state.logs = state.logs.filter(l => l.id !== id);
             if (lastLogId === id) {
                 document.getElementById('toast-undo').style.display = 'none';
             }
@@ -1609,6 +1831,10 @@
         }
 
         function addNewPlayer() {
+            if (!window.isMaster()) {
+                showCustomAlert("選手の登録は【マスター端末】のみ行えます。");
+                return;
+            }
             const numEl = document.getElementById('reg-num');
             const nameEl = document.getElementById('reg-name');
             const num = numEl.value.trim();
@@ -1623,6 +1849,10 @@
         }
 
         function deletePlayer(num) {
+            if (!window.isMaster()) {
+                showCustomAlert("選手の削除は【マスター端末】のみ行えます。");
+                return;
+            }
             window.appState.players = window.appState.players.filter(p => p.num !== num);
             commitState();
         }
@@ -1637,7 +1867,7 @@
                 chip.style.justifyContent = 'space-between';
                 chip.innerHTML = `
                     <span><strong class="num">#${p.num}</strong> ${p.name}</span>
-                    <button class="btn-delete-small" onclick="deletePlayer('${p.num}')" title="削除">✕</button>
+                    ${window.isMaster() ? `<button class="btn-delete-small" onclick="deletePlayer('${p.num}')" title="削除">✕</button>` : ''}
                 `;
                 container.appendChild(chip);
             });
@@ -1649,6 +1879,51 @@
             if (btnEl) btnEl.classList.add('active');
             renderStats();
             renderAllPlayerStatsTable();
+        }
+
+        function renderRankings() {
+            const players = window.appState.players || [];
+            const logs = (window.appState.logs || []).filter(l => l.matchId === window.appState.currentMatchId);
+
+            const scores = players.map(p => {
+                const numName = `#${p.num} ${p.name}`;
+                const pLogs = logs.filter(l => l.player === numName);
+
+                let spikeKills = 0, blockKills = 0, serveAces = 0, digGood = 0;
+
+                pLogs.forEach(l => {
+                    if (l.category === 'スパイク' && (l.action === '成功' || l.action === '決定')) spikeKills++;
+                    if (l.category === 'ブロック' && (l.action === '成功' || l.action === '決定')) blockKills++;
+                    if (l.category === 'サーブ' && (l.action === '成功' || l.action === '決定')) serveAces++;
+                    if ((l.category === 'ディグ' || l.category === 'カット') && (l.action === 'Aパス' || l.action === 'Bパス')) digGood++;
+                });
+
+                return { name: p.name, num: p.num, spikeKills, blockKills, serveAces, digGood };
+            });
+
+            renderSingleRanking('rk-spike-body', [...scores].sort((a,b)=>b.spikeKills - a.spikeKills), 'spikeKills', '点');
+            renderSingleRanking('rk-block-body', [...scores].sort((a,b)=>b.blockKills - a.blockKills), 'blockKills', '本');
+            renderSingleRanking('rk-serve-body', [...scores].sort((a,b)=>b.serveAces - a.serveAces), 'serveAces', '本');
+            renderSingleRanking('rk-dig-body', [...scores].sort((a,b)=>b.digGood - a.digGood), 'digGood', '回');
+        }
+
+        function renderSingleRanking(elementId, sortedArray, key, unit) {
+            const container = document.getElementById(elementId);
+            if (!container) return;
+            container.innerHTML = '';
+
+            const top3 = sortedArray.slice(0, 3);
+            top3.forEach((item, idx) => {
+                const row = document.createElement('div');
+                row.className = 'ranking-item';
+                const rankCls = idx === 0 ? 'top1' : (idx === 1 ? 'top2' : 'top3');
+                row.innerHTML = `
+                    <span class="ranking-rank ${rankCls}">${idx + 1}</span>
+                    <span class="ranking-name">#${item.num} ${item.name}</span>
+                    <span class="ranking-val">${item[key]} ${unit}</span>
+                `;
+                container.appendChild(row);
+            });
         }
 
         function renderStats() {
@@ -1784,7 +2059,7 @@
                                 <strong style="color:var(--primary); margin:0 4px;">${l.player}</strong>
                                 <span>${l.category} (${l.action})</span>
                             </div>
-                            <button class="btn-delete-small" onclick="deleteLog(${l.id})">削除</button>
+                            ${window.canRecord() ? `<button class="btn-delete-small" onclick="deleteLog(${l.id})">削除</button>` : ''}
                         `;
                         t1Container.appendChild(item);
                     });
@@ -1806,10 +2081,11 @@
                                 <strong style="color:var(--primary); margin:0 4px;">${l.player}</strong>
                                 <span>${l.category} (${l.action})</span>
                             </div>
+                            ${window.canRecord() ? `
                             <div style="display:flex; gap:4px;">
                                 <button class="btn-config-toggle" onclick="openEditLogModal(${l.id})">編集</button>
                                 <button class="btn-delete-small" onclick="deleteLog(${l.id})">削除</button>
-                            </div>
+                            </div>` : ''}
                         `;
                         t2Container.appendChild(item);
                     });
@@ -1818,6 +2094,10 @@
         }
 
         function openEditLogModal(targetId) {
+            if (!window.canRecord()) {
+                showCustomAlert("記録の修正は【マスター/サブ記録者】のみ行えます。");
+                return;
+            }
             const logs = window.appState.logs || [];
             if (logs.length === 0) {
                 showCustomAlert("編集できるログがありません");
@@ -1881,45 +2161,161 @@
             showCustomAlert("記録ログを修正しました。");
         }
 
-        function toggleSubOverwriteSetting() {
-            if (!isMaster()) {
-                showCustomAlert("この設定は【マスター端末】からのみ変更できます。");
+        function openRoomWelcomeModal() {
+            document.getElementById('welcome-room-modal').style.display = 'flex';
+            if (window.currentRoomId) {
+                document.getElementById('welcome-modal-close-btn').style.display = 'block';
+            }
+        }
+
+        function closeRoomWelcomeModal() {
+            document.getElementById('welcome-room-modal').style.display = 'none';
+        }
+
+        function handleWelcomeCreateRoom() {
+            const roomId = document.getElementById('welcome-create-room-id').value.trim();
+            const pass = document.getElementById('welcome-create-pass').value.trim() || '1234';
+
+            if (!roomId) {
+                showCustomAlert('ルーム番号を入力してください');
                 return;
             }
-            window.appState.allowSubOfflineOverwrite = !window.appState.allowSubOfflineOverwrite;
+
+            window.appState = {
+                roomId: roomId,
+                matches: [],
+                logs: [],
+                players: defaultPlayers,
+                currentMatchId: null,
+                masterDeviceId: window.myDeviceId,
+                masterPassword: pass,
+                subPassword: pass,
+                subDeviceIds: [],
+                updatedAt: Date.now()
+            };
+
+            closeRoomWelcomeModal();
+            if (window.connectRoom) {
+                window.connectRoom(roomId);
+            }
             commitState();
+            showCustomAlert(`新しいルーム 「${roomId}」 を作成し、マスター権限で入室しました！`);
+        }
+
+        function handleWelcomeJoinRoom() {
+            const roomId = document.getElementById('welcome-join-room-id').value.trim();
+            const pass = document.getElementById('welcome-join-pass').value.trim();
+
+            if (!roomId) {
+                showCustomAlert('入室するルーム番号を入力してください');
+                return;
+            }
+
+            closeRoomWelcomeModal();
+            if (window.connectRoom) {
+                window.connectRoom(roomId);
+            }
+
+            if (pass) {
+                const targetPwd = window.appState.subPassword || "1234";
+                const masterPwd = window.appState.masterPassword || "1234";
+                if (pass === targetPwd || pass === masterPwd) {
+                    if (!window.appState.subDeviceIds) window.appState.subDeviceIds = [];
+                    if (!window.appState.subDeviceIds.includes(window.myDeviceId)) {
+                        window.appState.subDeviceIds.push(window.myDeviceId);
+                    }
+                    commitState();
+                    showCustomAlert(`ルーム 「${roomId}」 に記録者（サブ権限）で入室しました！`);
+                    return;
+                }
+            }
+
+            showCustomAlert(`ルーム 「${roomId}」 に閲覧者権限で入室しました。`);
         }
 
         function handleRoleSwitchClick() {
-            if (isMaster()) {
-                showCustomAlert("この端末は【マスター端末】です。全機能が使用可能です。");
+            const currentRole = window.getRole();
+            if (currentRole === 'master') {
+                showCustomAlert("この端末は【マスター権限】です。全機能が制限なく使用可能です。");
                 return;
             }
 
-            showCustomPrompt("マスター権限を引き継ぐパスワードを入力してください:", "", (pwd) => {
+            const modal = document.getElementById('custom-dialog-modal');
+            const msgEl = document.getElementById('custom-dialog-message');
+            const btnsEl = document.getElementById('custom-dialog-buttons');
+
+            msgEl.innerHTML = `
+                <div style="font-weight:bold; margin-bottom:8px;">権限の切替 / 引き継ぎ</div>
+                <div style="font-size:0.75rem; color:var(--text-muted); margin-bottom:8px;">ルームパスワードを入力してください:</div>
+                <input type="password" id="role-pwd-input" class="text-input" style="width:100%; text-align:center;" placeholder="パスワード" />
+            `;
+
+            btnsEl.innerHTML = `
+                <button class="btn-delete-small" style="padding:6px 12px;" onclick="closeCustomDialog()">キャンセル</button>
+                <button class="btn-action-small" id="btn-submit-role-pwd">認証して昇格</button>
+            `;
+
+            modal.style.display = 'flex';
+
+            document.getElementById('btn-submit-role-pwd').onclick = () => {
+                const pwd = document.getElementById('role-pwd-input').value.trim();
+                closeCustomDialog();
+
                 if (!pwd) return;
-                if (pwd === (window.appState.masterPassword || "1234")) {
-                    window.appState.masterDeviceId = myDeviceId;
+
+                const masterPwd = window.appState.masterPassword || "1234";
+                const subPwd = window.appState.subPassword || "1234";
+
+                if (pwd === masterPwd) {
+                    window.appState.masterDeviceId = window.myDeviceId;
                     commitState();
-                    showCustomAlert("【マスター権限の引き継ぎ完了】\nこの端末がマスター端末に設定されました。");
+                    showCustomAlert("【マスター権限引き継ぎ完了】\nマスター権限を取得しました。");
+                } else if (pwd === subPwd) {
+                    if (!window.appState.subDeviceIds) window.appState.subDeviceIds = [];
+                    if (!window.appState.subDeviceIds.includes(window.myDeviceId)) {
+                        window.appState.subDeviceIds.push(window.myDeviceId);
+                    }
+                    commitState();
+                    showCustomAlert("【サブ（記録者）権限取得】\nスコアの変更や記録操作が可能になりました。");
                 } else {
                     showCustomAlert("パスワードが正しくありません。");
                 }
-            });
+            };
         }
 
         function openMasterPasswordModal() {
-            if (!isMaster()) {
+            if (!window.isMaster()) {
                 showCustomAlert("パスワード変更は【マスター端末】からのみ行えます。");
                 return;
             }
-            showCustomPrompt("新しいマスターパスワードを入力:", window.appState.masterPassword || "1234", (newPwd) => {
-                if (newPwd && newPwd.trim()) {
-                    window.appState.masterPassword = newPwd.trim();
+
+            const modal = document.getElementById('custom-dialog-modal');
+            const msgEl = document.getElementById('custom-dialog-message');
+            const btnsEl = document.getElementById('custom-dialog-buttons');
+
+            msgEl.innerHTML = `
+                <div style="font-weight:bold; margin-bottom:8px;">マスター/サブ パスワード変更</div>
+                <input type="password" id="new-master-pwd-input" class="text-input" style="width:100%; text-align:center;" value="${window.appState.masterPassword || '1234'}" placeholder="新しいパスワード" />
+            `;
+
+            btnsEl.innerHTML = `
+                <button class="btn-delete-small" style="padding:6px 12px;" onclick="closeCustomDialog()">キャンセル</button>
+                <button class="btn-action-small" id="btn-save-master-pwd">変更を保存</button>
+            `;
+
+            modal.style.display = 'flex';
+
+            document.getElementById('btn-save-master-pwd').onclick = () => {
+                const newPwd = document.getElementById('new-master-pwd-input').value.trim();
+                closeCustomDialog();
+
+                if (newPwd) {
+                    window.appState.masterPassword = newPwd;
+                    window.appState.subPassword = newPwd;
                     commitState();
-                    showCustomAlert("マスターパスワードを更新しました。");
+                    showCustomAlert("ルームパスワードを更新しました。");
                 }
-            });
+            };
         }
 
         function openQuickConfigModal() {
@@ -1939,11 +2335,12 @@
                     <div style="display:flex; gap:4px; margin-bottom:4px;">
                         <input type="text" class="text-input" id="q-label-${idx}" value="${item.label}" placeholder="表示名" />
                         <select class="text-input" id="q-cls-${idx}">
-                            <option value="type-success" ${item.cls==='type-success'?'selected':''}>緑 (成功)</option>
+                            <option value="type-success" ${item.cls==='type-success'?'selected':''}>緑 (自加点)</option>
+                            <option value="type-opp-miss" ${item.cls==='type-opp-miss'?'selected':''}>エメラルド (相手失点)</option>
                             <option value="type-info" ${item.cls==='type-info'?'selected':''}>青 (効果)</option>
                             <option value="type-warning" ${item.cls==='type-warning'?'selected':''}>黄 (タッチ/Cパス)</option>
                             <option value="type-purple" ${item.cls==='type-purple'?'selected':''}>紫 (Aパス)</option>
-                            <option value="type-miss" ${item.cls==='type-miss'?'selected':''}>赤 (失点)</option>
+                            <option value="type-miss" ${item.cls==='type-miss'?'selected':''}>赤 (相手加点)</option>
                         </select>
                     </div>
                     <div style="display:flex; gap:4px;">
@@ -1953,6 +2350,8 @@
                             <option value="サーブ" ${item.category==='サーブ'?'selected':''}>サーブ</option>
                             <option value="ディグ" ${item.category==='ディグ'?'selected':''}>ディグ</option>
                             <option value="カット" ${item.category==='カット'?'selected':''}>カット</option>
+                            <option value="相手失点" ${item.category==='相手失点'?'selected':''}>相手失点</option>
+                            <option value="相手得点" ${item.category==='相手得点'?'selected':''}>相手得点</option>
                         </select>
                         <input type="text" class="text-input" id="q-act-${idx}" value="${item.action}" placeholder="結果 (例: 成功)" />
                     </div>
@@ -1969,8 +2368,10 @@
 
         function saveQuickConfig() {
             const newConfig = [];
-            for (let i = 0; i < 4; i++) {
-                const label = document.getElementById(`q-label-${i}`).value || `ボタン${i+1}`;
+            for (let i = 0; i < 5; i++) {
+                const labelEl = document.getElementById(`q-label-${i}`);
+                if (!labelEl) continue;
+                const label = labelEl.value || `ボタン${i+1}`;
                 const cls = document.getElementById(`q-cls-${i}`).value;
                 const category = document.getElementById(`q-cat-${i}`).value;
                 const action = document.getElementById(`q-act-${i}`).value || '成功';
@@ -1994,9 +2395,9 @@
                 textarea.select();
                 try {
                     document.execCommand('copy');
-                    showCustomAlert(`【共有URLをコピーしました】\n他端末でこのURLを開くと同期されます。\n\nURL: ${currentUrl}`);
+                    showCustomAlert(`【共有URLをコピーしました】\nこのURLを開くとリアルタイム同期されます。\n\n${currentUrl}`);
                 } catch (err) {
-                    showCustomAlert(`以下のURLを共有してください:\n${currentUrl}`);
+                    showCustomAlert(`共有URL:\n${currentUrl}`);
                 }
             }
         }
@@ -2022,9 +2423,13 @@
         function switchTab(num) {
             document.getElementById('tab1-view').style.display = (num === 1) ? 'block' : 'none';
             document.getElementById('tab2-view').style.display = (num === 2) ? 'block' : 'none';
+            document.getElementById('tab3-view').style.display = (num === 3) ? 'block' : 'none';
+
             document.getElementById('btn-nav-1').className = `nav-item ${num === 1 ? 'active' : ''}`;
             document.getElementById('btn-nav-2').className = `nav-item ${num === 2 ? 'active' : ''}`;
-            if (num === 2) {
+            document.getElementById('btn-nav-3').className = `nav-item ${num === 3 ? 'active' : ''}`;
+
+            if (num === 2 || num === 3) {
                 renderAllUI();
             }
         }
@@ -2046,6 +2451,7 @@
             const setNum = match ? (match.currentSet || 1) : 1;
 
             let csv = `【試合概要】\n`;
+            csv += `ルーム番号,Rm ${window.currentRoomId}\n`;
             csv += `対戦相手,vs ${oppName}\n`;
             csv += `最終セット,第${setNum}セット\n`;
             csv += `最終スコア,自チーム ${finalMy} - ${finalOpp} 相手チーム\n\n`;
@@ -2104,29 +2510,31 @@
             const url = URL.createObjectURL(blob);
             const a = document.createElement('a');
             a.href = url;
-            a.download = `バレー記録_vs${oppName}_${new Date().toISOString().slice(0,10)}.csv`;
+            a.download = `バレー記録_Rm${window.currentRoomId}_vs${oppName}_${new Date().toISOString().slice(0,10)}.csv`;
             a.click();
             URL.revokeObjectURL(url);
         }
 
         function resetAllData() {
-            if (!isMaster()) {
+            if (!window.isMaster()) {
                 showCustomAlert("初期化は【マスター端末】のみ実行できます。");
                 return;
             }
-            showCustomConfirm("本当にこのルームのデータを初期化しますか？", (yes) => {
-                if (!yes) return;
+            showCustomConfirm("本当にこのルームのすべての試合・記録データを初期化しますか？", () => {
                 window.appState = {
+                    roomId: window.currentRoomId,
                     matches: [],
                     logs: [],
                     players: defaultPlayers,
                     currentMatchId: null,
-                    masterDeviceId: myDeviceId,
-                    masterPassword: "1234",
-                    allowSubOfflineOverwrite: true,
+                    masterDeviceId: window.myDeviceId,
+                    masterPassword: window.appState.masterPassword || "1234",
+                    subPassword: window.appState.subPassword || "1234",
+                    subDeviceIds: [],
                     updatedAt: Date.now()
                 };
                 commitState();
+                showCustomAlert("ルームデータを初期化しました。");
             });
         }
 
@@ -2153,14 +2561,14 @@
         window.saveQuickConfig = saveQuickConfig;
         window.handleRoleSwitchClick = handleRoleSwitchClick;
         window.openMasterPasswordModal = openMasterPasswordModal;
-        window.toggleSubOverwriteSetting = toggleSubOverwriteSetting;
         window.openEditLogModal = openEditLogModal;
         window.closeEditLogModal = closeEditLogModal;
         window.onSelectEditLogId = onSelectEditLogId;
         window.saveEditedLog = saveEditedLog;
-        window.closeCustomAlert = closeCustomAlert;
-        window.closeCustomConfirm = closeCustomConfirm;
-        window.closeCustomPrompt = closeCustomPrompt;
+        window.openRoomWelcomeModal = openRoomWelcomeModal;
+        window.closeRoomWelcomeModal = closeRoomWelcomeModal;
+        window.handleWelcomeCreateRoom = handleWelcomeCreateRoom;
+        window.handleWelcomeJoinRoom = handleWelcomeJoinRoom;
 
         window.onload = function() {
             const savedTheme = localStorage.getItem(KEY_THEME) || 'dark';
@@ -2175,8 +2583,13 @@
 
             renderAllUI();
 
-            if (window.initSyncLoop) {
-                window.initSyncLoop();
+            if (window.initFirebaseSync) {
+                window.initFirebaseSync();
+            }
+
+            const urlParams = new URLSearchParams(window.location.search);
+            if (!urlParams.get('room')) {
+                openRoomWelcomeModal();
             }
         };
     </script>
