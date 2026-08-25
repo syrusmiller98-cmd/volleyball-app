@@ -388,11 +388,11 @@
 
         .guide-text { text-align: center; color: var(--text-muted); font-size: 0.8rem; margin-top: 10px; }
 
-        .result-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-top: 8px; }
+        .result-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-top: 8px; }
 
         .btn-result {
             height: 44px;
-            font-size: 0.85rem;
+            font-size: 0.8rem;
             font-weight: 700;
             border: none;
             border-radius: 8px;
@@ -419,6 +419,7 @@
         .stat-val.primary { color: var(--primary); }
         .stat-val.success { color: var(--success); }
         .stat-val.danger { color: var(--danger); }
+        .stat-val.warning { color: var(--warning); }
 
         .set-tabs { display: flex; gap: 2px; background: var(--bg-main); padding: 2px; border-radius: 8px; border: 1px solid var(--border); }
         .set-tab-btn { padding: 3px 8px; font-size: 0.7rem; font-weight: 600; border: none; border-radius: 6px; background: none; color: var(--text-muted); cursor: pointer; }
@@ -480,7 +481,6 @@
         const roomId = getRoomId();
         let app, auth, db, user;
 
-        // 画像に基づく全14名の部員リスト
         const defaultPlayers = [
             { num: "1", name: "八木 春馬" },
             { num: "2", name: "大石 崚仁" },
@@ -747,18 +747,20 @@
                     <div class="stat-row"><span>失点</span><span class="stat-val danger" id="st-serve-miss">0</span></div>
                 </div>
 
+                <!-- レシーブ (Aパス・Bパス・Cパス) -->
                 <div class="stat-card">
                     <div class="stat-card-title">レシーブ</div>
-                    <div class="stat-row"><span>成功</span><span class="stat-val success" id="st-rec-success">0</span></div>
-                    <div class="stat-row"><span>Aパス</span><span class="stat-val primary" id="st-rec-a">0</span></div>
-                    <div class="stat-row"><span>失点</span><span class="stat-val danger" id="st-rec-miss">0</span></div>
+                    <div class="stat-row"><span>Aパス</span><span class="stat-val success" id="st-rec-a">0</span></div>
+                    <div class="stat-row"><span>Bパス</span><span class="stat-val primary" id="st-rec-b">0</span></div>
+                    <div class="stat-row"><span>Cパス</span><span class="stat-val warning" id="st-rec-c">0</span></div>
                 </div>
 
+                <!-- カット (Aパス・Bパス・Cパス) -->
                 <div class="stat-card">
                     <div class="stat-card-title">カット</div>
                     <div class="stat-row"><span>Aパス</span><span class="stat-val success" id="st-cut-a">0</span></div>
                     <div class="stat-row"><span>Bパス</span><span class="stat-val primary" id="st-cut-b">0</span></div>
-                    <div class="stat-row"><span>Cパス</span><span class="stat-val danger" id="st-cut-c">0</span></div>
+                    <div class="stat-row"><span>Cパス</span><span class="stat-val warning" id="st-cut-c">0</span></div>
                 </div>
             </div>
         </div>
@@ -796,18 +798,20 @@
                     <div class="stat-row"><span>失点</span><span class="stat-val danger" id="pst-serve-miss">0</span></div>
                 </div>
 
+                <!-- レシーブ個人集計 -->
                 <div class="stat-card">
                     <div class="stat-card-title">レシーブ (個人)</div>
-                    <div class="stat-row"><span>成功</span><span class="stat-val success" id="pst-rec-success">0</span></div>
-                    <div class="stat-row"><span>Aパス</span><span class="stat-val primary" id="pst-rec-a">0</span></div>
-                    <div class="stat-row"><span>失点</span><span class="stat-val danger" id="pst-rec-miss">0</span></div>
+                    <div class="stat-row"><span>Aパス</span><span class="stat-val success" id="pst-rec-a">0</span></div>
+                    <div class="stat-row"><span>Bパス</span><span class="stat-val primary" id="pst-rec-b">0</span></div>
+                    <div class="stat-row"><span>Cパス</span><span class="stat-val warning" id="pst-rec-c">0</span></div>
                 </div>
 
+                <!-- カット個人集計 -->
                 <div class="stat-card">
                     <div class="stat-card-title">カット (個人)</div>
                     <div class="stat-row"><span>Aパス</span><span class="stat-val success" id="pst-cut-a">0</span></div>
                     <div class="stat-row"><span>Bパス</span><span class="stat-val primary" id="pst-cut-b">0</span></div>
-                    <div class="stat-row"><span>Cパス</span><span class="stat-val danger" id="pst-cut-c">0</span></div>
+                    <div class="stat-row"><span>Cパス</span><span class="stat-val warning" id="pst-cut-c">0</span></div>
                 </div>
             </div>
         </div>
@@ -843,6 +847,7 @@
 
         const KEY_THEME = "vball_theme_setting";
 
+        // 結果選択マップ (レシーブの「成功」を排除し「Cパス (btn-warning)」を追加)
         const RESULT_MAP = {
             'スパイク': [
                 { label: '＋ 決定', val: '決定', cls: 'btn-success' },
@@ -860,9 +865,9 @@
                 { label: '✕ 失点', val: '失点', cls: 'btn-miss' }
             ],
             'レシーブ': [
-                { label: '＋ 成功', val: '成功', cls: 'btn-success' },
                 { label: '＋ Aパス', val: 'Aパス', cls: 'btn-purple' },
                 { label: '＋ Bパス', val: 'Bパス', cls: 'btn-info' },
+                { label: '＋ Cパス', val: 'Cパス', cls: 'btn-warning' },
                 { label: '✕ 失点', val: '失点', cls: 'btn-miss' }
             ],
             'カット': [
@@ -1273,7 +1278,7 @@
             let spikeS = 0, spikeT = 0, spikeM = 0;
             let blockS = 0, blockT = 0, blockM = 0;
             let serveS = 0, serveE = 0, serveM = 0;
-            let recS = 0, recA = 0, recM = 0;
+            let recA = 0, recB = 0, recC = 0;
             let cutA = 0, cutB = 0, cutC = 0;
 
             filtered.forEach(l => {
@@ -1290,9 +1295,9 @@
                     if (l.action === '効果') serveE++;
                     if (l.action === '失点') serveM++;
                 } else if (l.category === 'レシーブ') {
-                    if (l.action === '成功') recS++;
                     if (l.action === 'Aパス') recA++;
-                    if (l.action === '失点') recM++;
+                    if (l.action === 'Bパス') recB++;
+                    if (l.action === 'Cパス') recC++;
                 } else if (l.category === 'カット') {
                     if (l.action === 'Aパス') cutA++;
                     if (l.action === 'Bパス') cutB++;
@@ -1312,9 +1317,9 @@
             document.getElementById('st-serve-effect').innerText = serveE;
             document.getElementById('st-serve-miss').innerText = serveM;
 
-            document.getElementById('st-rec-success').innerText = recS;
             document.getElementById('st-rec-a').innerText = recA;
-            document.getElementById('st-rec-miss').innerText = recM;
+            document.getElementById('st-rec-b').innerText = recB;
+            document.getElementById('st-rec-c').innerText = recC;
 
             document.getElementById('st-cut-a').innerText = cutA;
             document.getElementById('st-cut-b').innerText = cutB;
@@ -1335,7 +1340,7 @@
             let spikeS = 0, spikeT = 0, spikeM = 0;
             let blockS = 0, blockT = 0, blockM = 0;
             let serveS = 0, serveE = 0, serveM = 0;
-            let recS = 0, recA = 0, recM = 0;
+            let recA = 0, recB = 0, recC = 0;
             let cutA = 0, cutB = 0, cutC = 0;
 
             filtered.forEach(l => {
@@ -1352,9 +1357,9 @@
                     if (l.action === '効果') serveE++;
                     if (l.action === '失点') serveM++;
                 } else if (l.category === 'レシーブ') {
-                    if (l.action === '成功') recS++;
                     if (l.action === 'Aパス') recA++;
-                    if (l.action === '失点') recM++;
+                    if (l.action === 'Bパス') recB++;
+                    if (l.action === 'Cパス') recC++;
                 } else if (l.category === 'カット') {
                     if (l.action === 'Aパス') cutA++;
                     if (l.action === 'Bパス') cutB++;
@@ -1378,9 +1383,9 @@
             document.getElementById('pst-serve-effect').innerText = serveE;
             document.getElementById('pst-serve-miss').innerText = serveM;
 
-            document.getElementById('pst-rec-success').innerText = recS;
             document.getElementById('pst-rec-a').innerText = recA;
-            document.getElementById('pst-rec-miss').innerText = recM;
+            document.getElementById('pst-rec-b').innerText = recB;
+            document.getElementById('pst-rec-c').innerText = recC;
 
             document.getElementById('pst-cut-a').innerText = cutA;
             document.getElementById('pst-cut-b').innerText = cutB;
