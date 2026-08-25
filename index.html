@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>バレーボール試合記録システム</title>
     <style>
-        /* CSS変数によるテーマ統一管理 */
         :root[data-theme="dark"] {
             --bg-main: #0f172a;
             --bg-card: #1e293b;
@@ -66,7 +65,6 @@
             transition: background-color 0.2s, color 0.2s;
         }
 
-        /* 固定ヘッダー */
         .fixed-header {
             position: fixed;
             top: 0;
@@ -79,7 +77,6 @@
             padding: 6px 12px 8px 12px;
             border-bottom: 1px solid var(--border);
             z-index: 1000;
-            transition: background 0.2s, border-color 0.2s;
         }
 
         .header-top-row {
@@ -120,23 +117,17 @@
         }
 
         .btn-share-link {
-            background: var(--bg-chip);
-            color: var(--text-main);
-            border: 1px solid var(--border);
-            padding: 2px 8px;
+            background: var(--primary);
+            color: #ffffff;
+            border: none;
+            padding: 3px 8px;
             border-radius: 4px;
-            font-size: 0.68rem;
-            font-weight: 600;
+            font-size: 0.7rem;
+            font-weight: 700;
             cursor: pointer;
             display: flex;
             align-items: center;
             gap: 2px;
-        }
-
-        .header-match-info {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
         }
 
         .score-board {
@@ -182,7 +173,6 @@
             font-weight: 700;
             min-width: 24px;
             text-align: center;
-            margin: 0 2px;
         }
 
         .score-num.opp { color: var(--team-opp); }
@@ -208,15 +198,10 @@
             font-size: 0.9rem;
             font-weight: 700;
             cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: opacity 0.15s;
         }
 
         .score-btn.opp { background: var(--team-opp); }
         .score-btn.my { background: var(--team-my); }
-        .score-btn:active { opacity: 0.8; }
 
         .theme-toggle-btn {
             background: var(--bg-card);
@@ -231,7 +216,6 @@
             cursor: pointer;
         }
 
-        /* ボトムナビゲーション */
         .bottom-nav {
             position: fixed;
             bottom: 0;
@@ -245,7 +229,6 @@
             justify-content: space-around;
             padding: 6px 0;
             z-index: 1000;
-            transition: background 0.2s, border-color 0.2s;
         }
 
         .nav-item {
@@ -259,7 +242,6 @@
             cursor: pointer;
             background: none;
             border: none;
-            gap: 2px;
         }
 
         .nav-item.active { color: var(--primary); }
@@ -270,11 +252,8 @@
             fill: none;
             stroke: currentColor;
             stroke-width: 2;
-            stroke-linecap: round;
-            stroke-linejoin: round;
         }
 
-        /* セクションカード */
         .card-section { padding: 10px 14px; }
 
         .section-title {
@@ -303,7 +282,6 @@
             border-color: var(--primary);
         }
 
-        /* 試合カード＆フォーム */
         .match-create-box {
             background: var(--bg-card);
             border: 1px solid var(--border);
@@ -315,10 +293,7 @@
             gap: 6px;
         }
 
-        .match-input-row {
-            display: flex;
-            gap: 6px;
-        }
+        .match-input-row { display: flex; gap: 6px; }
 
         .text-input {
             flex: 1;
@@ -339,7 +314,6 @@
             font-weight: 600;
             border-radius: 6px;
             cursor: pointer;
-            white-space: nowrap;
         }
 
         .match-card {
@@ -348,30 +322,13 @@
             border-radius: 10px;
             padding: 10px;
             margin-bottom: 6px;
-            transition: border-color 0.2s;
             cursor: pointer;
         }
 
-        .match-card.selected-match {
-            border: 2px solid var(--primary);
-        }
-
-        .match-title {
-            font-size: 0.95rem;
-            font-weight: 700;
-            color: var(--text-main);
-        }
-
-        .match-meta {
-            font-size: 0.72rem;
-            color: var(--text-muted);
-        }
-
-        .match-scores-history {
-            font-size: 0.8rem;
-            color: var(--text-muted);
-            margin-top: 4px;
-        }
+        .match-card.selected-match { border: 2px solid var(--primary); }
+        .match-title { font-size: 0.95rem; font-weight: 700; color: var(--text-main); }
+        .match-meta { font-size: 0.72rem; color: var(--text-muted); }
+        .match-scores-history { font-size: 0.8rem; color: var(--text-muted); margin-top: 4px; }
 
         .btn-delete-small {
             background-color: var(--danger-light);
@@ -383,12 +340,7 @@
             cursor: pointer;
         }
 
-        /* 選手チップ */
-        .player-grid {
-            display: flex;
-            flex-wrap: wrap;
-            gap: 6px;
-        }
+        .player-grid { display: flex; flex-wrap: wrap; gap: 6px; }
 
         .player-chip {
             padding: 6px 12px;
@@ -402,20 +354,10 @@
             display: flex;
             align-items: center;
             gap: 6px;
-            transition: all 0.15s ease;
         }
 
-        .player-chip .num {
-            color: var(--text-muted);
-            font-size: 0.75rem;
-        }
-
-        .player-chip.selected {
-            background-color: var(--primary);
-            color: #ffffff;
-            border-color: var(--primary);
-        }
-
+        .player-chip .num { color: var(--text-muted); font-size: 0.75rem; }
+        .player-chip.selected { background-color: var(--primary); color: #ffffff; border-color: var(--primary); }
         .player-chip.selected .num { color: rgba(255, 255, 255, 0.8); }
 
         .chip-del-btn {
@@ -428,12 +370,7 @@
             cursor: pointer;
         }
 
-        /* プレー選択ボタン */
-        .btn-grid-5 {
-            display: grid;
-            grid-template-columns: repeat(5, 1fr);
-            gap: 6px;
-        }
+        .btn-grid-5 { display: grid; grid-template-columns: repeat(5, 1fr); gap: 6px; }
 
         button.action-btn {
             height: 44px;
@@ -444,39 +381,14 @@
             color: var(--text-muted);
             background: var(--bg-card);
             cursor: pointer;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            transition: all 0.15s ease;
         }
 
-        button.action-btn.active-play {
-            background: var(--primary);
-            color: #ffffff;
-            border-color: var(--primary);
-        }
+        button.action-btn.active-play { background: var(--primary); color: #ffffff; border-color: var(--primary); }
+        button.action-btn:disabled { opacity: 0.5; cursor: not-allowed; }
 
-        button.action-btn:disabled {
-            background-color: var(--bg-main);
-            color: var(--text-muted);
-            opacity: 0.5;
-            cursor: not-allowed;
-        }
+        .guide-text { text-align: center; color: var(--text-muted); font-size: 0.8rem; margin-top: 10px; }
 
-        .guide-text {
-            text-align: center;
-            color: var(--text-muted);
-            font-size: 0.8rem;
-            margin-top: 10px;
-        }
-
-        /* 結果選択エリア（塗りつぶし） */
-        .result-grid {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 6px;
-            margin-top: 8px;
-        }
+        .result-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 6px; margin-top: 8px; }
 
         .btn-result {
             height: 44px;
@@ -486,13 +398,6 @@
             border-radius: 8px;
             color: #ffffff;
             cursor: pointer;
-            box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-            transition: transform 0.08s, opacity 0.15s;
-        }
-
-        .btn-result:active {
-            transform: scale(0.96);
-            opacity: 0.85;
         }
 
         .btn-result.btn-success { background-color: var(--success); }
@@ -501,211 +406,44 @@
         .btn-result.btn-warning { background-color: var(--warning); color: #000; }
         .btn-result.btn-purple { background-color: var(--purple); }
 
-        /* 選手登録カード */
-        .register-card {
-            background: var(--bg-card);
-            border: 1px solid var(--border);
-            border-radius: 10px;
-            padding: 10px;
-            margin-bottom: 10px;
-        }
+        .register-card { background: var(--bg-card); border: 1px solid var(--border); border-radius: 10px; padding: 10px; margin-bottom: 10px; }
+        .register-form { display: flex; gap: 6px; margin-bottom: 8px; }
+        .num-input { width: 50px; padding: 6px; background: var(--bg-input); border: 1px solid var(--border); border-radius: 6px; color: var(--text-main); text-align: center; }
+        .name-input { flex: 1; padding: 6px; background: var(--bg-input); border: 1px solid var(--border); border-radius: 6px; color: var(--text-main); }
 
-        .register-form {
-            display: flex;
-            gap: 6px;
-            margin-bottom: 8px;
-        }
-
-        .num-input {
-            width: 50px;
-            padding: 6px;
-            background: var(--bg-input);
-            border: 1px solid var(--border);
-            border-radius: 6px;
-            color: var(--text-main);
-            text-align: center;
-            font-weight: 600;
-        }
-
-        .name-input {
-            flex: 1;
-            padding: 6px;
-            background: var(--bg-input);
-            border: 1px solid var(--border);
-            border-radius: 6px;
-            color: var(--text-main);
-        }
-
-        /* 集計グリッド */
-        .stats-grid-container {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 8px;
-        }
-
-        .stat-card {
-            background: var(--bg-card);
-            border-radius: 10px;
-            padding: 10px;
-            border: 1px solid var(--border);
-        }
-
-        .stat-card-title {
-            font-size: 0.75rem;
-            font-weight: 600;
-            color: var(--text-muted);
-            margin-bottom: 6px;
-        }
-
-        .stat-row {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 4px;
-            font-size: 0.8rem;
-            color: var(--text-main);
-        }
-
-        .stat-val {
-            font-size: 1.1rem;
-            font-weight: 700;
-        }
-
+        .stats-grid-container { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+        .stat-card { background: var(--bg-card); border-radius: 10px; padding: 10px; border: 1px solid var(--border); }
+        .stat-card-title { font-size: 0.75rem; font-weight: 600; color: var(--text-muted); margin-bottom: 6px; }
+        .stat-row { display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px; font-size: 0.8rem; }
+        .stat-val { font-size: 1.1rem; font-weight: 700; }
         .stat-val.primary { color: var(--primary); }
         .stat-val.success { color: var(--success); }
         .stat-val.danger { color: var(--danger); }
 
-        .set-tabs {
-            display: flex;
-            gap: 2px;
-            background: var(--bg-main);
-            padding: 2px;
-            border-radius: 8px;
-            border: 1px solid var(--border);
-        }
+        .set-tabs { display: flex; gap: 2px; background: var(--bg-main); padding: 2px; border-radius: 8px; border: 1px solid var(--border); }
+        .set-tab-btn { padding: 3px 8px; font-size: 0.7rem; font-weight: 600; border: none; border-radius: 6px; background: none; color: var(--text-muted); cursor: pointer; }
+        .set-tab-btn.active { background: var(--primary); color: #ffffff; }
 
-        .set-tab-btn {
-            padding: 3px 8px;
-            font-size: 0.7rem;
-            font-weight: 600;
-            border: none;
-            border-radius: 6px;
-            background: none;
-            color: var(--text-muted);
-            cursor: pointer;
-        }
+        .player-select-dropdown { background: var(--bg-card); color: var(--primary); border: 1px solid var(--border); padding: 4px 8px; border-radius: 6px; font-size: 0.8rem; font-weight: 600; }
+        .log-container { max-height: 160px; overflow-y: auto; background: var(--bg-card); border-radius: 8px; padding: 6px; border: 1px solid var(--border); }
+        .log-item { display: flex; justify-content: space-between; align-items: center; padding: 6px 4px; border-bottom: 1px solid var(--border); font-size: 0.8rem; }
+        
+        .btn-export { background-color: var(--primary); width: 100%; padding: 10px; font-size: 0.85rem; font-weight: 600; border: none; border-radius: 8px; color: white; cursor: pointer; margin-top: 8px; }
+        .btn-reset-danger { background-color: var(--danger-light); color: var(--danger); border: 1px solid var(--danger); width: 100%; padding: 8px; font-size: 0.8rem; font-weight: 600; border-radius: 8px; cursor: pointer; margin-top: 6px; }
+        
+        .toast-undo { background: var(--bg-card); color: var(--text-main); padding: 8px 12px; border-radius: 8px; margin: 8px 14px; display: flex; justify-content: space-between; align-items: center; font-size: 0.8rem; border: 1px solid var(--border); }
+        .btn-undo { background: var(--danger); color: white; border: none; padding: 4px 10px; font-size: 0.75rem; font-weight: 600; border-radius: 4px; cursor: pointer; }
+        .empty-notice { text-align: center; color: var(--text-muted); font-size: 0.8rem; padding: 12px; background: var(--bg-card); border-radius: 8px; border: 1px dashed var(--border); }
 
-        .set-tab-btn.active {
-            background: var(--primary);
-            color: #ffffff;
-        }
-
-        .player-select-dropdown {
-            background: var(--bg-card);
-            color: var(--primary);
-            border: 1px solid var(--border);
-            padding: 4px 8px;
-            border-radius: 6px;
-            font-size: 0.8rem;
-            font-weight: 600;
-            cursor: pointer;
-            max-width: 160px;
-        }
-
-        .log-container {
-            max-height: 160px;
-            overflow-y: auto;
-            background: var(--bg-card);
-            border-radius: 8px;
-            padding: 6px;
-            border: 1px solid var(--border);
-        }
-
-        .log-item {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 6px 4px;
-            border-bottom: 1px solid var(--border);
-            font-size: 0.8rem;
-        }
-
-        .log-item:last-child { border-bottom: none; }
-
-        .btn-export {
-            background-color: var(--primary);
-            width: 100%;
-            padding: 10px;
-            font-size: 0.85rem;
-            font-weight: 600;
-            border: none;
-            border-radius: 8px;
-            color: white;
-            cursor: pointer;
-            margin-top: 8px;
-        }
-
-        .btn-reset-danger {
-            background-color: var(--danger-light);
-            color: var(--danger);
-            border: 1px solid var(--danger);
-            width: 100%;
-            padding: 8px;
-            font-size: 0.8rem;
-            font-weight: 600;
-            border-radius: 8px;
-            cursor: pointer;
-            margin-top: 6px;
-        }
-
-        .toast-undo {
-            background: var(--bg-card);
-            color: var(--text-main);
-            padding: 8px 12px;
-            border-radius: 8px;
-            margin: 8px 14px;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            font-size: 0.8rem;
-            border: 1px solid var(--border);
-        }
-
-        .btn-undo {
-            background: var(--danger);
-            color: white;
-            border: none;
-            padding: 4px 10px;
-            font-size: 0.75rem;
-            font-weight: 600;
-            border-radius: 4px;
-            cursor: pointer;
-        }
-
-        .empty-notice {
-            text-align: center;
-            color: var(--text-muted);
-            font-size: 0.8rem;
-            padding: 12px;
-            background: var(--bg-card);
-            border-radius: 8px;
-            border: 1px dashed var(--border);
-        }
-
-        #copy-textarea {
-            position: absolute;
-            left: -9999px;
-            top: 0;
-        }
+        #copy-textarea { position: absolute; left: -9999px; top: 0; }
     </style>
 
-    <!-- 全面クラウド同期（Firebase Firestore）ES Module -->
+    <!-- クラウドリアルタイム同期モジュール -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInWithCustomToken, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
         import { getFirestore, doc, setDoc, onSnapshot } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js";
 
-        // アプリID ＆ Firebase設定の取得
         const appId = typeof __app_id !== 'undefined' ? __app_id : 'vball-realtime-app';
         let firebaseConfig = null;
 
@@ -714,10 +452,9 @@
                 firebaseConfig = typeof __firebase_config === 'string' ? JSON.parse(__firebase_config) : __firebase_config;
             }
         } catch (e) {
-            console.error("Firebase config parse error:", e);
+            console.error("Config parse error:", e);
         }
 
-        // 設定フォールバック（プレビューテスト用）
         if (!firebaseConfig || !firebaseConfig.projectId) {
             firebaseConfig = {
                 apiKey: "AIzaSyDemoConfigKeyForVolleyballApp123",
@@ -729,7 +466,6 @@
             };
         }
 
-        // ルームID（URLパラメータ `?room=xxx` から取得、無ければ自動生成）
         function getRoomId() {
             const urlParams = new URLSearchParams(window.location.search);
             let room = urlParams.get('room');
@@ -744,17 +480,24 @@
         const roomId = getRoomId();
         let app, auth, db, user;
 
-        // デフォルト選手リスト
+        // 画像に基づく全14名の部員リスト
         const defaultPlayers = [
-            { num: "1", name: "山田 太郎" },
-            { num: "5", name: "鈴木 健太" },
-            { num: "7", name: "田中 涼" },
-            { num: "10", name: "佐藤 大輝" },
-            { num: "14", name: "中村 蓮" },
-            { num: "3", name: "伊藤 翔" }
+            { num: "1", name: "八木 春馬" },
+            { num: "2", name: "大石 崚仁" },
+            { num: "3", name: "山本 英輝" },
+            { num: "4", name: "曽根 悠汰" },
+            { num: "5", name: "青山 智晴" },
+            { num: "6", name: "森 柚輝" },
+            { num: "7", name: "村松 哲" },
+            { num: "8", name: "見崎 孝太朗" },
+            { num: "9", name: "伏見 晄太郎" },
+            { num: "10", name: "大村 陸人" },
+            { num: "11", name: "小松 旭陽" },
+            { num: "12", name: "小林 陽作" },
+            { num: "13", name: "中村 柚月" },
+            { num: "14", name: "吉野 颯人" }
         ];
 
-        // グローバル単一状態（Single Source of Truth）
         window.appState = {
             matches: [],
             logs: [],
@@ -764,7 +507,6 @@
 
         let isSelfUpdating = false;
 
-        // 初期化 ＆ クラウド同期リスナー構築
         async function initSyncSystem() {
             const statusBadge = document.getElementById('status-badge-text');
             if (statusBadge) {
@@ -777,7 +519,6 @@
                 auth = getAuth(app);
                 db = getFirestore(app);
 
-                // RULE 3: 認証手続きを完了させる
                 if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
                     await signInWithCustomToken(auth, __initial_auth_token);
                 } else {
@@ -792,10 +533,8 @@
                     statusBadge.className = 'status-badge online';
                 }
 
-                // RULE 1: 正しいパス構造 (/artifacts/{appId}/public/data/rooms/{roomId})
                 const roomDocRef = doc(db, 'artifacts', appId, 'public', 'data', 'rooms', roomId);
 
-                // クラウドの変更を常時リアルタイム監視
                 onSnapshot(roomDocRef, (docSnap) => {
                     if (isSelfUpdating) {
                         isSelfUpdating = false;
@@ -809,11 +548,9 @@
                             if (!window.appState.players || window.appState.players.length === 0) {
                                 window.appState.players = defaultPlayers;
                             }
-                            // 他端末からの更新を即時に画面全体へ反映！
                             window.renderAllUI();
                         }
                     } else {
-                        // 初回作成時
                         window.saveStateToCloud();
                     }
                 }, (err) => {
@@ -833,7 +570,6 @@
             }
         }
 
-        // クラウドへ状態を即座に保存・配信
         window.saveStateToCloud = async function() {
             if (!db || !user) return;
             try {
@@ -860,12 +596,11 @@
             <span id="header-date">----/--/-- --:--</span>
             <div style="display:flex; gap:6px; align-items:center;">
                 <span class="status-badge connecting" id="status-badge-text">⏳ 接続中...</span>
-                <button class="btn-share-link" onclick="copyShareUrl()" title="このURLを他の端末で開くと自動でリアルタイム共有されます">🔗 共有リンク</button>
+                <button class="btn-share-link" onclick="copyShareUrl()" title="現在の試合・登録データを保持したまま共有リンクを発行します">🔗 共有リンク</button>
             </div>
         </div>
         <div class="header-match-info">
             <div class="score-board">
-                <!-- 相手チーム (左) -->
                 <div class="score-team-box opp">
                     <span class="team-tag opp" id="header-opp-tag">相手</span>
                     <button class="score-btn opp" onclick="updateScore('opp', -1)">-</button>
@@ -873,7 +608,6 @@
                     <button class="score-btn opp" onclick="updateScore('opp', 1)">+</button>
                 </div>
 
-                <!-- 自分チーム (右) -->
                 <div class="score-team-box my">
                     <button class="score-btn my" onclick="updateScore('my', -1)">-</button>
                     <span class="score-num my" id="header-my-score">0</span>
@@ -881,7 +615,6 @@
                     <span class="team-tag my">自</span>
                 </div>
 
-                <!-- セット切替 -->
                 <select id="header-set-select" class="set-select" onchange="onChangeCurrentSet()">
                     <option value="1">S1</option>
                     <option value="2">S2</option>
@@ -890,7 +623,6 @@
                     <option value="5">S5</option>
                 </select>
 
-                <!-- テーマ切替ボタン -->
                 <button class="theme-toggle-btn" onclick="toggleTheme()" title="テーマ切替">
                     <svg style="width:16px; height:16px; fill:none; stroke:currentColor; stroke-width:2;" id="theme-icon" viewBox="0 0 24 24">
                         <circle cx="12" cy="12" r="5"></circle>
@@ -910,14 +642,12 @@
 
     <!-- 2. タブ1: 記録画面 -->
     <div id="tab1-view">
-        <!-- 試合作成・選択 -->
         <div class="card-section">
             <div class="section-title">
                 <span>1. 試合を選択</span>
                 <span class="step-badge" id="tag-step1">要選択</span>
             </div>
 
-            <!-- 新規試合作成フォーム -->
             <div class="match-create-box">
                 <div class="match-input-row">
                     <input type="text" id="new-opponent" class="text-input" placeholder="対戦相手 (例: 東京第一高校)" />
@@ -929,11 +659,9 @@
                 </div>
             </div>
 
-            <!-- 試合一覧カードリスト -->
             <div id="match-cards-list"></div>
         </div>
 
-        <!-- 選手選択 -->
         <div class="card-section">
             <div class="section-title">
                 <span>2. 選手を選択</span>
@@ -942,7 +670,6 @@
             <div class="player-grid" id="player-grid-list"></div>
         </div>
 
-        <!-- プレー選択 -->
         <div class="card-section">
             <div class="section-title">
                 <span>3. プレーを選択</span>
@@ -957,18 +684,14 @@
             </div>
 
             <div id="guide-message" class="guide-text">先に試合と選手を選択してください</div>
-
-            <!-- 動的結果ボタンエリア (塗りつぶしカラー) -->
             <div id="result-buttons-area" style="display:none;"></div>
         </div>
 
-        <!-- 直前記録Undo -->
         <div class="toast-undo" id="toast-undo" style="display: none;">
             <div id="undo-text">-</div>
             <button class="btn-undo" onclick="undoLastLog()">取り消す</button>
         </div>
 
-        <!-- タブ1内の直近記録履歴 -->
         <div class="card-section">
             <div class="section-title">直近の記録</div>
             <div class="log-container" id="tab1-log-list">記録はありません</div>
@@ -977,12 +700,11 @@
 
     <!-- 3. タブ2: 集計・管理画面 -->
     <div id="tab2-view" style="display: none;">
-        <!-- 選手登録・一覧管理 -->
         <div class="card-section">
             <div class="section-title">選手登録・管理</div>
             <div class="register-card">
                 <div class="register-form">
-                    <input type="text" id="reg-num" class="num-input" placeholder="#" value="12" />
+                    <input type="text" id="reg-num" class="num-input" placeholder="#" value="15" />
                     <input type="text" id="reg-name" class="name-input" placeholder="選手名" />
                     <button class="btn-action-small" onclick="addNewPlayer()">＋ 登録</button>
                 </div>
@@ -990,7 +712,6 @@
             </div>
         </div>
 
-        <!-- チーム集計 -->
         <div class="card-section">
             <div class="section-title">
                 <span>チーム集計</span>
@@ -1042,7 +763,6 @@
             </div>
         </div>
 
-        <!-- 個人集計 -->
         <div class="card-section">
             <div class="section-title">
                 <span>個人集計</span>
@@ -1092,7 +812,6 @@
             </div>
         </div>
 
-        <!-- 記録履歴一覧 -->
         <div class="card-section">
             <div class="section-title">記録履歴 (全ログ)</div>
             <div class="log-container" id="log-list">記録はありません</div>
@@ -1116,7 +835,6 @@
     <textarea id="copy-textarea"></textarea>
 
     <script>
-        // アプリケーション状態変数
         let currentState = 'noMatch';
         let selectedPlayer = null;
         let selectedAction = null;
@@ -1125,7 +843,6 @@
 
         const KEY_THEME = "vball_theme_setting";
 
-        // 結果ボタンマップ
         const RESULT_MAP = {
             'スパイク': [
                 { label: '＋ 決定', val: '決定', cls: 'btn-success' },
@@ -1156,7 +873,6 @@
             ]
         };
 
-        // 状態が変更された際、自端末UI描画＆クラウド保存を実行
         function commitState() {
             renderAllUI();
             if (window.saveStateToCloud) {
@@ -1164,7 +880,6 @@
             }
         }
 
-        // 画面全体の一括再描画（他端末からのリアルタイム受信時もコレが呼ばれる）
         window.renderAllUI = function() {
             const state = window.appState || {};
             const matches = state.matches || [];
@@ -1303,7 +1018,6 @@
             });
         }
 
-        // スコア更新
         function updateScore(team, val) {
             const state = window.appState;
             if (!state.currentMatchId) return;
@@ -1331,7 +1045,6 @@
             commitState();
         }
 
-        // 試合作成・選択・削除
         function handleCreateMatch() {
             const oppInput = document.getElementById('new-opponent');
             const dateInput = document.getElementById('new-date');
@@ -1389,7 +1102,6 @@
             commitState();
         }
 
-        // 選手選択
         function selectPlayer(numName) {
             if (!window.appState.currentMatchId) {
                 alert('先に試合を選択してください');
@@ -1416,7 +1128,6 @@
             });
         }
 
-        // プレー選択
         function onSelectAction(actName) {
             if (!selectedPlayer) return;
 
@@ -1442,7 +1153,6 @@
             area.appendChild(gridDiv);
         }
 
-        // 結果ログ記録
         function saveResultLog(resultVal) {
             const state = window.appState;
             if (!state.currentMatchId || !selectedPlayer || !selectedAction) return;
@@ -1491,7 +1201,6 @@
             commitState();
         }
 
-        // 選手追加・削除
         function addNewPlayer() {
             const numEl = document.getElementById('reg-num');
             const nameEl = document.getElementById('reg-name');
@@ -1549,7 +1258,6 @@
             }
         }
 
-        // 集計関数
         function filterStats(setVal, btnEl) {
             currentStatsSet = setVal;
             document.querySelectorAll('.set-tab-btn').forEach(b => b.classList.remove('active'));
@@ -1728,8 +1436,10 @@
             }
         }
 
-        // 共有URLコピー
-        function copyShareUrl() {
+        async function copyShareUrl() {
+            if (window.saveStateToCloud) {
+                await window.saveStateToCloud();
+            }
             const currentUrl = window.location.href;
             const textarea = document.getElementById('copy-textarea');
             if (textarea) {
@@ -1737,14 +1447,13 @@
                 textarea.select();
                 try {
                     document.execCommand('copy');
-                    alert(`共有リンクをコピーしました！\nこのURLを他の端末で開くとリアルタイム共有されます。\n\nURL: ${currentUrl}`);
+                    alert(`【準備完了】現在の試合データとスコアを含めた共有リンクをコピーしました！\n\nURL: ${currentUrl}`);
                 } catch (err) {
                     prompt("以下のURLをコピーして相手に共有してください:", currentUrl);
                 }
             }
         }
 
-        // テーマ切り替え
         function toggleTheme() {
             const currentTheme = document.documentElement.getAttribute('data-theme') || 'dark';
             const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
@@ -1763,7 +1472,6 @@
             }
         }
 
-        // タブ切り替え
         function switchTab(num) {
             document.getElementById('tab1-view').style.display = (num === 1) ? 'block' : 'none';
             document.getElementById('tab2-view').style.display = (num === 2) ? 'block' : 'none';
@@ -1774,7 +1482,6 @@
             }
         }
 
-        // CSV出力
         function exportCSV() {
             const logs = window.appState.logs || [];
             const matchLogs = logs.filter(l => l.matchId === window.appState.currentMatchId);
@@ -1802,26 +1509,17 @@
             URL.revokeObjectURL(url);
         }
 
-        // データ初期化
         function resetAllData() {
             if (!confirm("本当にこのルームの全てのデータを初期化しますか？")) return;
             window.appState = {
                 matches: [],
                 logs: [],
-                players: [
-                    { num: "1", name: "山田 太郎" },
-                    { num: "5", name: "鈴木 健太" },
-                    { num: "7", name: "田中 涼" },
-                    { num: "10", name: "佐藤 大輝" },
-                    { num: "14", name: "中村 蓮" },
-                    { num: "3", name: "伊藤 翔" }
-                ],
+                players: defaultPlayers,
                 currentMatchId: null
             };
             commitState();
         }
 
-        // イベントバインド
         window.updateScore = updateScore;
         window.onChangeCurrentSet = onChangeCurrentSet;
         window.handleCreateMatch = handleCreateMatch;
@@ -1842,7 +1540,6 @@
         window.exportCSV = exportCSV;
         window.resetAllData = resetAllData;
 
-        // 初期ロード時処理
         window.onload = function() {
             const savedTheme = localStorage.getItem(KEY_THEME) || 'dark';
             document.documentElement.setAttribute('data-theme', savedTheme);
@@ -1856,7 +1553,6 @@
 
             renderAllUI();
 
-            // クラウド同期の初期化実行
             if (window.initSyncSystem) {
                 window.initSyncSystem();
             }
