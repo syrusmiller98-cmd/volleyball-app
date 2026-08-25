@@ -98,23 +98,9 @@
             gap: 4px;
         }
 
-        .status-badge.online {
-            background: rgba(16, 185, 129, 0.15);
-            color: var(--success);
-            border: 1px solid var(--success);
-        }
-
-        .status-badge.connecting {
-            background: var(--primary-light);
-            color: var(--primary);
-            border: 1px solid var(--primary);
-        }
-
-        .status-badge.offline {
-            background: var(--danger-light);
-            color: var(--danger);
-            border: 1px solid var(--danger);
-        }
+        .status-badge.online { background: rgba(16, 185, 129, 0.15); color: var(--success); border: 1px solid var(--success); }
+        .status-badge.connecting { background: var(--primary-light); color: var(--primary); border: 1px solid var(--primary); }
+        .status-badge.offline { background: var(--danger-light); color: var(--danger); border: 1px solid var(--danger); }
 
         .btn-share-link {
             background: var(--primary);
@@ -168,13 +154,7 @@
         .team-tag.opp { background: var(--team-opp); }
         .team-tag.my { background: var(--team-my); }
 
-        .score-num {
-            font-size: 1.3rem;
-            font-weight: 700;
-            min-width: 24px;
-            text-align: center;
-        }
-
+        .score-num { font-size: 1.3rem; font-weight: 700; min-width: 24px; text-align: center; }
         .score-num.opp { color: var(--team-opp); }
         .score-num.my { color: var(--team-my); }
 
@@ -245,14 +225,7 @@
         }
 
         .nav-item.active { color: var(--primary); }
-
-        .nav-icon {
-            width: 18px;
-            height: 18px;
-            fill: none;
-            stroke: currentColor;
-            stroke-width: 2;
-        }
+        .nav-icon { width: 18px; height: 18px; fill: none; stroke: currentColor; stroke-width: 2; }
 
         .card-section { padding: 10px 14px; }
 
@@ -276,10 +249,49 @@
             border: 1px solid var(--border);
         }
 
-        .step-badge.active {
-            background: var(--primary);
+        .step-badge.active { background: var(--primary); color: #ffffff; border-color: var(--primary); }
+
+        /* クイック選択エリア */
+        .quick-section {
+            background: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 10px;
+            padding: 10px;
+            margin-bottom: 10px;
+        }
+
+        .quick-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 6px;
+            margin-top: 6px;
+        }
+
+        .btn-quick {
+            padding: 8px 10px;
+            font-size: 0.8rem;
+            font-weight: 700;
+            border: none;
+            border-radius: 8px;
             color: #ffffff;
-            border-color: var(--primary);
+            cursor: pointer;
+            text-align: left;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 1px 3px rgba(0,0,0,0.2);
+        }
+
+        .btn-quick .sub { font-size: 0.68rem; opacity: 0.85; font-weight: normal; }
+
+        .btn-config-toggle {
+            background: none;
+            border: none;
+            color: var(--primary);
+            font-size: 0.72rem;
+            font-weight: 600;
+            cursor: pointer;
+            text-decoration: underline;
         }
 
         .match-create-box {
@@ -436,10 +448,22 @@
         .btn-undo { background: var(--danger); color: white; border: none; padding: 4px 10px; font-size: 0.75rem; font-weight: 600; border-radius: 4px; cursor: pointer; }
         .empty-notice { text-align: center; color: var(--text-muted); font-size: 0.8rem; padding: 12px; background: var(--bg-card); border-radius: 8px; border: 1px dashed var(--border); }
 
+        /* カスタムモーダル */
+        .modal-bg {
+            position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.6); z-index: 2000; display: none;
+            align-items: center; justify-content: center;
+        }
+        .modal-box {
+            background: var(--bg-card); border: 1px solid var(--border);
+            border-radius: 12px; padding: 16px; width: 90%; max-width: 400px;
+            color: var(--text-main);
+        }
+
         #copy-textarea { position: absolute; left: -9999px; top: 0; }
     </style>
 
-    <!-- クラウドリアルタイム同期モジュール -->
+    <!-- クラウドリアルタイム同期 ＆ ローカルストレージ二重化 -->
     <script type="module">
         import { initializeApp } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js";
         import { getAuth, signInWithCustomToken, signInAnonymously } from "https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js";
@@ -452,9 +476,7 @@
             if (typeof __firebase_config !== 'undefined' && __firebase_config) {
                 firebaseConfig = typeof __firebase_config === 'string' ? JSON.parse(__firebase_config) : __firebase_config;
             }
-        } catch (e) {
-            console.error("Config parse error:", e);
-        }
+        } catch (e) { console.error("Config error:", e); }
 
         if (!firebaseConfig || !firebaseConfig.projectId) {
             firebaseConfig = {
@@ -498,12 +520,22 @@
             { num: "14", name: "吉野 颯人" }
         ];
 
-        window.appState = {
-            matches: [],
-            logs: [],
-            players: defaultPlayers,
-            currentMatchId: null
-        };
+        // 1. ローカルバックグラウンド保存データの読み込み
+        const LOCAL_KEY = `vball_local_data_${roomId}`;
+        function loadLocalData() {
+            const saved = localStorage.getItem(LOCAL_KEY);
+            if (saved) {
+                try { return JSON.parse(saved); } catch(e){}
+            }
+            return {
+                matches: [],
+                logs: [],
+                players: defaultPlayers,
+                currentMatchId: null
+            };
+        }
+
+        window.appState = loadLocalData();
 
         let isSelfUpdating = false;
 
@@ -548,15 +580,17 @@
                             if (!window.appState.players || window.appState.players.length === 0) {
                                 window.appState.players = defaultPlayers;
                             }
+                            // ローカルにも常時同期書き込み
+                            localStorage.setItem(LOCAL_KEY, JSON.stringify(window.appState));
                             window.renderAllUI();
                         }
                     } else {
                         window.saveStateToCloud();
                     }
                 }, (err) => {
-                    console.error("onSnapshot error:", err);
+                    console.error("Snapshot error:", err);
                     if (statusBadge) {
-                        statusBadge.innerText = `📱 ローカルモード (${roomId})`;
+                        statusBadge.innerText = `📱 ローカル保存中 (${roomId})`;
                         statusBadge.className = 'status-badge offline';
                     }
                 });
@@ -564,13 +598,16 @@
             } catch (err) {
                 console.warn("Firebase Init fallback:", err);
                 if (statusBadge) {
-                    statusBadge.innerText = `📱 ローカルモード (${roomId})`;
+                    statusBadge.innerText = `📱 ローカル保存中 (${roomId})`;
                     statusBadge.className = 'status-badge offline';
                 }
             }
         }
 
         window.saveStateToCloud = async function() {
+            // ローカルストレージに必ず保存（バックグラウンド保持）
+            localStorage.setItem(LOCAL_KEY, JSON.stringify(window.appState));
+
             if (!db || !user) return;
             try {
                 isSelfUpdating = true;
@@ -596,7 +633,7 @@
             <span id="header-date">----/--/-- --:--</span>
             <div style="display:flex; gap:6px; align-items:center;">
                 <span class="status-badge connecting" id="status-badge-text">⏳ 接続中...</span>
-                <button class="btn-share-link" onclick="copyShareUrl()" title="現在の試合・登録データを保持したまま共有リンクを発行します">🔗 共有リンク</button>
+                <button class="btn-share-link" onclick="copyShareUrl()" title="共有リンクを発行">🔗 共有リンク</button>
             </div>
         </div>
         <div class="header-match-info">
@@ -642,6 +679,7 @@
 
     <!-- 2. タブ1: 記録画面 -->
     <div id="tab1-view">
+        <!-- 試合作成・選択 -->
         <div class="card-section">
             <div class="section-title">
                 <span>1. 試合を選択</span>
@@ -662,14 +700,27 @@
             <div id="match-cards-list"></div>
         </div>
 
+        <!-- 端末別クイック選択エリア -->
+        <div class="card-section">
+            <div class="quick-section">
+                <div class="section-title" style="margin-bottom:0;">
+                    <span>⚡ クイック選択 (この端末専用)</span>
+                    <button class="btn-config-toggle" onclick="openQuickConfigModal()">⚙ 設定</button>
+                </div>
+                <div class="quick-grid" id="quick-buttons-container"></div>
+            </div>
+        </div>
+
+        <!-- 選手選択（任意） -->
         <div class="card-section">
             <div class="section-title">
-                <span>2. 選手を選択</span>
-                <span class="step-badge" id="tag-step2">待機中</span>
+                <span>2. 選手を選択 (任意)</span>
+                <span class="step-badge" id="tag-step2">指定なし</span>
             </div>
             <div class="player-grid" id="player-grid-list"></div>
         </div>
 
+        <!-- プレー選択 -->
         <div class="card-section">
             <div class="section-title">
                 <span>3. プレーを選択</span>
@@ -683,7 +734,7 @@
                 <button class="action-btn" id="btn-play-cut" onclick="onSelectAction('カット')" disabled>カット</button>
             </div>
 
-            <div id="guide-message" class="guide-text">先に試合と選手を選択してください</div>
+            <div id="guide-message" class="guide-text">先に試合を選択してください</div>
             <div id="result-buttons-area" style="display:none;"></div>
         </div>
 
@@ -747,7 +798,6 @@
                     <div class="stat-row"><span>失点</span><span class="stat-val danger" id="st-serve-miss">0</span></div>
                 </div>
 
-                <!-- レシーブ (Aパス・Bパス・Cパス) -->
                 <div class="stat-card">
                     <div class="stat-card-title">レシーブ</div>
                     <div class="stat-row"><span>Aパス</span><span class="stat-val success" id="st-rec-a">0</span></div>
@@ -755,7 +805,6 @@
                     <div class="stat-row"><span>Cパス</span><span class="stat-val warning" id="st-rec-c">0</span></div>
                 </div>
 
-                <!-- カット (Aパス・Bパス・Cパス) -->
                 <div class="stat-card">
                     <div class="stat-card-title">カット</div>
                     <div class="stat-row"><span>Aパス</span><span class="stat-val success" id="st-cut-a">0</span></div>
@@ -798,7 +847,6 @@
                     <div class="stat-row"><span>失点</span><span class="stat-val danger" id="pst-serve-miss">0</span></div>
                 </div>
 
-                <!-- レシーブ個人集計 -->
                 <div class="stat-card">
                     <div class="stat-card-title">レシーブ (個人)</div>
                     <div class="stat-row"><span>Aパス</span><span class="stat-val success" id="pst-rec-a">0</span></div>
@@ -806,7 +854,6 @@
                     <div class="stat-row"><span>Cパス</span><span class="stat-val warning" id="pst-rec-c">0</span></div>
                 </div>
 
-                <!-- カット個人集計 -->
                 <div class="stat-card">
                     <div class="stat-card-title">カット (個人)</div>
                     <div class="stat-row"><span>Aパス</span><span class="stat-val success" id="pst-cut-a">0</span></div>
@@ -836,6 +883,20 @@
         </button>
     </div>
 
+    <!-- クイック選択設定モーダル -->
+    <div class="modal-bg" id="quick-modal">
+        <div class="modal-box">
+            <div class="section-title">
+                <span>クイックボタン設定 (この端末のみ)</span>
+                <button class="btn-delete-small" onclick="closeQuickConfigModal()">✕</button>
+            </div>
+            <div style="font-size:0.75rem; color:var(--text-muted); margin-bottom:10px;">よく使うプレーのショートカットを4つ登録できます。</div>
+            
+            <div id="quick-config-forms"></div>
+            <button class="btn-export" style="margin-top:10px;" onclick="saveQuickConfig()">設定を端末に保存</button>
+        </div>
+    </div>
+
     <textarea id="copy-textarea"></textarea>
 
     <script>
@@ -846,8 +907,24 @@
         let lastLogId = null;
 
         const KEY_THEME = "vball_theme_setting";
+        const KEY_QUICK_CONFIG = "vball_quick_config_device_v1";
 
-        // 結果選択マップ (レシーブの「成功」を排除し「Cパス (btn-warning)」を追加)
+        // デフォルトのクイック選択設定（端末別ストレージ保存）
+        const DEFAULT_QUICK_CONFIG = [
+            { label: 'スパイク決定', player: '指定なし', category: 'スパイク', action: '決定', cls: 'btn-success' },
+            { label: 'サーブ効果', player: '指定なし', category: 'サーブ', action: '効果', cls: 'btn-info' },
+            { label: 'カット Aパス', player: '指定なし', category: 'カット', action: 'Aパス', cls: 'btn-purple' },
+            { label: 'サーブ失点', player: '指定なし', category: 'サーブ', action: '失点', cls: 'btn-miss' }
+        ];
+
+        function getDeviceQuickConfig() {
+            const saved = localStorage.getItem(KEY_QUICK_CONFIG);
+            if (saved) {
+                try { return JSON.parse(saved); } catch(e){}
+            }
+            return DEFAULT_QUICK_CONFIG;
+        }
+
         const RESULT_MAP = {
             'スパイク': [
                 { label: '＋ 決定', val: '決定', cls: 'btn-success' },
@@ -897,6 +974,7 @@
 
             updateHeaderInfo(currentMatch);
             renderMatchCardsList(matches, state.currentMatchId);
+            renderQuickButtons();
             renderPlayerGrid(state.players || []);
             renderRegisteredPlayers(state.players || []);
             updatePersonalPlayerDropdown(state.players || []);
@@ -967,6 +1045,35 @@
             });
         }
 
+        // 端末別クイックボタン描画
+        function renderQuickButtons() {
+            const container = document.getElementById('quick-buttons-container');
+            if (!container) return;
+            container.innerHTML = '';
+
+            const config = getDeviceQuickConfig();
+            config.forEach(item => {
+                const btn = document.createElement('button');
+                btn.className = `btn-quick ${item.cls || 'btn-info'}`;
+                btn.innerHTML = `
+                    <span>${item.label}</span>
+                    <span class="sub">${item.player !== '指定なし' ? item.player : ''}</span>
+                `;
+                btn.onclick = () => {
+                    if (!window.appState.currentMatchId) {
+                        alert('先に試合を選択してください');
+                        return;
+                    }
+                    saveDirectLog(
+                        item.player === '指定なし' ? (selectedPlayer || '指定なし') : item.player,
+                        item.category,
+                        item.action
+                    );
+                };
+                container.appendChild(btn);
+            });
+        }
+
         function updateStepAndButtons(match) {
             const tag1 = document.getElementById('tag-step1');
             const tag2 = document.getElementById('tag-step2');
@@ -984,7 +1091,7 @@
             if (!match) {
                 currentState = 'noMatch';
                 if (tag1) { tag1.innerText = '要選択'; tag1.className = 'step-badge active'; }
-                if (tag2) { tag2.innerText = '待機中'; tag2.className = 'step-badge'; }
+                if (tag2) { tag2.innerText = '指定なし'; tag2.className = 'step-badge'; }
                 if (tag3) { tag3.innerText = '待機中'; tag3.className = 'step-badge'; }
                 if (guideMsg) guideMsg.innerText = '↑ 先に試合を作成または選択してください';
                 playButtons.forEach(b => { if(b) b.disabled = true; });
@@ -994,19 +1101,18 @@
 
             if (tag1) { tag1.innerText = '選択済'; tag1.className = 'step-badge'; }
 
+            // 改善: 選手未選択でもプレーボタンをアクティブにする
+            playButtons.forEach(b => { if(b) b.disabled = false; });
+
             if (!selectedPlayer) {
-                currentState = 'matchSelected';
-                if (tag2) { tag2.innerText = '要選択'; tag2.className = 'step-badge active'; }
-                if (tag3) { tag3.innerText = '待機中'; tag3.className = 'step-badge'; }
-                if (guideMsg) guideMsg.innerText = '↑ 記録する選手を選択してください';
-                playButtons.forEach(b => { if(b) b.disabled = true; });
-                document.getElementById('result-buttons-area').style.display = 'none';
+                if (tag2) { tag2.innerText = '指定なし'; tag2.className = 'step-badge'; }
+                if (guideMsg) guideMsg.innerText = 'プレーを選択してください (選手未選択時は「指定なし」で記録)';
             } else {
-                if (tag2) { tag2.innerText = selectedPlayer; tag2.className = 'step-badge'; }
-                if (tag3) { tag3.innerText = selectedAction || '要選択'; tag3.className = 'step-badge active'; }
+                if (tag2) { tag2.innerText = selectedPlayer; tag2.className = 'step-badge active'; }
                 if (guideMsg) guideMsg.innerText = `${selectedPlayer} のプレーを選択してください`;
-                playButtons.forEach(b => { if(b) b.disabled = false; });
             }
+
+            if (tag3) { tag3.innerText = selectedAction || '要選択'; tag3.className = 'step-badge active'; }
 
             ['spike','block','serve','receive','cut'].forEach(id => {
                 const btn = document.getElementById(`btn-play-${id}`);
@@ -1112,8 +1218,11 @@
                 alert('先に試合を選択してください');
                 return;
             }
-            selectedPlayer = numName;
-            selectedAction = null;
+            if (selectedPlayer === numName) {
+                selectedPlayer = null; // タップ解除
+            } else {
+                selectedPlayer = numName;
+            }
             renderAllUI();
         }
 
@@ -1134,7 +1243,10 @@
         }
 
         function onSelectAction(actName) {
-            if (!selectedPlayer) return;
+            if (!window.appState.currentMatchId) {
+                alert('先に試合を選択してください');
+                return;
+            }
 
             selectedAction = actName;
             renderAllUI();
@@ -1159,8 +1271,15 @@
         }
 
         function saveResultLog(resultVal) {
+            const playerToLog = selectedPlayer || '指定なし';
+            saveDirectLog(playerToLog, selectedAction, resultVal);
+            selectedAction = null;
+            document.getElementById('result-buttons-area').style.display = 'none';
+        }
+
+        function saveDirectLog(player, category, action) {
             const state = window.appState;
-            if (!state.currentMatchId || !selectedPlayer || !selectedAction) return;
+            if (!state.currentMatchId) return;
 
             const match = state.matches.find(m => m.id === state.currentMatchId);
             const currentSetNum = match ? (match.currentSet || 1) : 1;
@@ -1172,20 +1291,17 @@
                 id: Date.now(),
                 matchId: state.currentMatchId,
                 set: currentSetNum,
-                player: selectedPlayer,
-                category: selectedAction,
-                action: resultVal,
+                player: player,
+                category: category,
+                action: action,
                 time: timeStr
             };
 
             state.logs.unshift(log);
             lastLogId = log.id;
 
-            document.getElementById('undo-text').innerText = `${selectedPlayer} / ${selectedAction} [${resultVal}]`;
+            document.getElementById('undo-text').innerText = `${player} / ${category} [${action}]`;
             document.getElementById('toast-undo').style.display = 'flex';
-
-            selectedAction = null;
-            document.getElementById('result-buttons-area').style.display = 'none';
 
             commitState();
         }
@@ -1441,6 +1557,68 @@
             }
         }
 
+        // 端末別クイックボタン設定モーダルの操作
+        function openQuickConfigModal() {
+            const modal = document.getElementById('quick-modal');
+            const container = document.getElementById('quick-config-forms');
+            const config = getDeviceQuickConfig();
+
+            container.innerHTML = '';
+            config.forEach((item, idx) => {
+                const box = document.createElement('div');
+                box.style.marginBottom = '8px';
+                box.style.padding = '6px';
+                box.style.background = 'var(--bg-main)';
+                box.style.borderRadius = '6px';
+                box.innerHTML = `
+                    <div style="font-size:0.75rem; font-weight:bold; margin-bottom:4px;">ボタン ${idx + 1}</div>
+                    <div style="display:flex; gap:4px; margin-bottom:4px;">
+                        <input type="text" class="text-input" id="q-label-${idx}" value="${item.label}" placeholder="表示名" />
+                        <select class="text-input" id="q-cls-${idx}">
+                            <option value="btn-success" ${item.cls==='btn-success'?'selected':''}>緑 (決定/成功)</option>
+                            <option value="btn-info" ${item.cls==='btn-info'?'selected':''}>青 (効果/Bパス)</option>
+                            <option value="btn-warning" ${item.cls==='btn-warning'?'selected':''}>橙 (タッチ/Cパス)</option>
+                            <option value="btn-purple" ${item.cls==='btn-purple'?'selected':''}>紫 (Aパス)</option>
+                            <option value="btn-miss" ${item.cls==='btn-miss'?'selected':''}>赤 (失点)</option>
+                        </select>
+                    </div>
+                    <div style="display:flex; gap:4px;">
+                        <select class="text-input" id="q-cat-${idx}">
+                            <option value="スパイク" ${item.category==='スパイク'?'selected':''}>スパイク</option>
+                            <option value="ブロック" ${item.category==='ブロック'?'selected':''}>ブロック</option>
+                            <option value="サーブ" ${item.category==='サーブ'?'selected':''}>サーブ</option>
+                            <option value="レシーブ" ${item.category==='レシーブ'?'selected':''}>レシーブ</option>
+                            <option value="カット" ${item.category==='カット'?'selected':''}>カット</option>
+                        </select>
+                        <input type="text" class="text-input" id="q-act-${idx}" value="${item.action}" placeholder="結果 (例: 決定)" />
+                    </div>
+                `;
+                container.appendChild(box);
+            });
+
+            modal.style.display = 'flex';
+        }
+
+        function closeQuickConfigModal() {
+            document.getElementById('quick-modal').style.display = 'none';
+        }
+
+        function saveQuickConfig() {
+            const newConfig = [];
+            for (let i = 0; i < 4; i++) {
+                const label = document.getElementById(`q-label-${i}`).value || `ボタン${i+1}`;
+                const cls = document.getElementById(`q-cls-${i}`).value;
+                const category = document.getElementById(`q-cat-${i}`).value;
+                const action = document.getElementById(`q-act-${i}`).value || '決定';
+
+                newConfig.push({ label, player: '指定なし', category, action, cls });
+            }
+
+            localStorage.setItem(KEY_QUICK_CONFIG, JSON.stringify(newConfig));
+            closeQuickConfigModal();
+            renderQuickButtons();
+        }
+
         async function copyShareUrl() {
             if (window.saveStateToCloud) {
                 await window.saveStateToCloud();
@@ -1452,9 +1630,9 @@
                 textarea.select();
                 try {
                     document.execCommand('copy');
-                    alert(`【準備完了】現在の試合データとスコアを含めた共有リンクをコピーしました！\n\nURL: ${currentUrl}`);
+                    alert(`【共有準備完了】現在のデータを同期させたURLをコピーしました！\n\nURL: ${currentUrl}`);
                 } catch (err) {
-                    prompt("以下のURLをコピーして相手に共有してください:", currentUrl);
+                    prompt("以下のURLをコピーして共有してください:", currentUrl);
                 }
             }
         }
@@ -1544,6 +1722,9 @@
         window.switchTab = switchTab;
         window.exportCSV = exportCSV;
         window.resetAllData = resetAllData;
+        window.openQuickConfigModal = openQuickConfigModal;
+        window.closeQuickConfigModal = closeQuickConfigModal;
+        window.saveQuickConfig = saveQuickConfig;
 
         window.onload = function() {
             const savedTheme = localStorage.getItem(KEY_THEME) || 'dark';
