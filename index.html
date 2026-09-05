@@ -4,7 +4,7 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
     <meta name="robots" content="noindex, nofollow">
-    <title>バレーボール試合記録システム</title>
+    <title>バレーボール試合記録システム (データ保護・高信頼版)</title>
     <style>
         :root[data-theme="dark"] {
             --bg-main: #0b0f19;
@@ -397,7 +397,7 @@
         .match-card.selected-match { border: 1.5px solid var(--primary); background: var(--primary-light); }
         .match-title { font-size: 0.88rem; font-weight: 700; color: var(--text-main); }
         .match-meta { font-size: 0.7rem; color: var(--text-muted); }
-        .match-scores-history { font-size: 0.75rem; color: var(--text-muted); margin-top: 4px; }
+        .match-scores-history { font-size: 0.75rem; color: var(--text-muted); margin-top: 4px; word-break: break-all; }
 
         .btn-delete-small {
             background-color: transparent;
@@ -409,7 +409,6 @@
             cursor: pointer;
         }
 
-        /* 3列四角枠に詰めて入れる選手選択グリッド */
         .player-grid-pack {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
@@ -502,7 +501,6 @@
         .num-input { width: 50px; padding: 6px; background: var(--bg-input); border: 1px solid var(--border); border-radius: 4px; color: var(--text-main); text-align: center; outline: none; }
         .name-input { flex: 1; padding: 6px; background: var(--bg-input); border: 1px solid var(--border); border-radius: 4px; color: var(--text-main); outline: none; }
 
-        /* ランキング表 */
         .ranking-grid {
             display: grid;
             grid-template-columns: repeat(2, 1fr);
@@ -537,11 +535,7 @@
         }
         .ranking-item:last-child { border-bottom: none; }
 
-        .ranking-rank {
-            font-weight: 700;
-            width: 18px;
-            color: var(--text-muted);
-        }
+        .ranking-rank { font-weight: 700; width: 18px; color: var(--text-muted); }
         .ranking-rank.top1 { color: #f59e0b; }
         .ranking-rank.top2 { color: #94a3b8; }
         .ranking-rank.top3 { color: #b45309; }
@@ -559,8 +553,8 @@
         .stat-val.danger { color: var(--danger); }
         .stat-val.warning { color: var(--warning); }
 
-        .set-tabs { display: flex; gap: 2px; background: var(--bg-main); padding: 2px; border-radius: 6px; border: 1px solid var(--border); }
-        .set-tab-btn { padding: 3px 8px; font-size: 0.7rem; font-weight: 600; border: none; border-radius: 4px; background: none; color: var(--text-muted); cursor: pointer; }
+        .set-tabs { display: flex; gap: 2px; background: var(--bg-main); padding: 2px; border-radius: 6px; border: 1px solid var(--border); overflow-x: auto; }
+        .set-tab-btn { padding: 3px 8px; font-size: 0.7rem; font-weight: 600; border: none; border-radius: 4px; background: none; color: var(--text-muted); cursor: pointer; white-space: nowrap; }
         .set-tab-btn.active { background: var(--primary); color: #ffffff; }
 
         .log-container { max-height: 200px; overflow-y: auto; background: var(--bg-card); border-radius: 6px; padding: 6px; border: 1px solid var(--border); }
@@ -632,19 +626,27 @@
             appId: "1:000000000000:web:000000000000"
         };
 
+        const OLD_STORAGE_KEYS = [
+            "vball_data_local_v1.4",
+            "vball_data_local_v1.3",
+            "vball_data_local_v1.2",
+            "vball_data_local_v1.1",
+            "vball_data_local_v1.0",
+            "vball_data_local"
+        ];
+
         function getDeviceId() {
             let id = localStorage.getItem('vball_device_id');
             if (!id) {
                 id = 'dev_' + Math.random().toString(36).substring(2, 10);
-                localStorage.setItem('vball_device_id', id);
+                try { localStorage.setItem('vball_device_id', id); } catch(e){}
             }
             return id;
         }
 
         function getInitialRoomId() {
             const urlParams = new URLSearchParams(window.location.search);
-            let room = urlParams.get('room');
-            return room || null;
+            return urlParams.get('room') || null;
         }
 
         const myDeviceId = getDeviceId();
@@ -667,24 +669,105 @@
             { num: "14", name: "吉野 颯人" }
         ];
 
+        /* 安全なローカル保存ラッパー */
+        function safeSaveLocal(roomId, data) {
+            try {
+                localStorage.setItem(`vball_data_room_${roomId}`, JSON.stringify(data));
+            } catch (err) {
+                console.warn("LocalStorage quota exceeded or unavailable:", err);
+            }
+        }
+        window.safeSaveLocal = safeSaveLocal;
+
+        /* 試合データ構造の標準化とセット別スコアの完全独立マイグレーション */
+        function sanitizeMatch(match) {
+            if (!match) return;
+            if (!match.maxSets || match.maxSets < 6) match.maxSets = 6;
+            if (!match.currentSet || match.currentSet < 1) match.currentSet = 1;
+
+            const rawScores = Array.isArray(match.setScores) ? match.setScores : [];
+            const newSetScores = [];
+
+            for (let i = 0; i < match.maxSets; i++) {
+                const item = rawScores[i];
+                newSetScores.push({
+                    my: (item && typeof item.my === 'number') ? item.my : ((i === (match.currentSet - 1)) ? (match.myScore || 0) : 0),
+                    opp: (item && typeof item.opp === 'number') ? item.opp : ((i === (match.currentSet - 1)) ? (match.oppScore || 0) : 0)
+                });
+            }
+            match.setScores = newSetScores;
+            
+            // 下位互換性のためトップレベルを同期
+            const curr = newSetScores[match.currentSet - 1] || { my: 0, opp: 0 };
+            match.myScore = curr.my;
+            match.oppScore = curr.opp;
+        }
+        window.sanitizeMatch = sanitizeMatch;
+
+        /* データ読み込みと過去バージョンの自動引き継ぎ */
         function loadLocalData(roomId) {
             const saved = localStorage.getItem(`vball_data_room_${roomId}`);
+            let state = null;
+
             if (saved) {
-                try { return JSON.parse(saved); } catch(e){}
+                try { state = JSON.parse(saved); } catch(e){}
             }
-            return {
-                roomId: roomId,
-                matches: [],
-                logs: [],
-                players: defaultPlayers,
-                currentMatchId: null,
-                masterDeviceId: myDeviceId,
-                masterPassword: "1234",
-                subPassword: "1234",
-                subDeviceIds: [],
-                allowSubOfflineOverwrite: true,
-                updatedAt: 0 // クラウド上の既存データを確実に優先受信するため0で初期化
-            };
+
+            // ルームデータが存在しない場合、旧バージョンのキーから自動移行を実施
+            if (!state || !state.matches || state.matches.length === 0) {
+                for (const oldKey of OLD_STORAGE_KEYS) {
+                    const oldVal = localStorage.getItem(oldKey);
+                    if (oldVal) {
+                        try {
+                            const parsedOld = JSON.parse(oldVal);
+                            if (parsedOld && (parsedOld.matches || parsedOld.logs)) {
+                                state = {
+                                    roomId: roomId,
+                                    matches: parsedOld.matches || [],
+                                    logs: parsedOld.logs || [],
+                                    players: parsedOld.players || defaultPlayers,
+                                    currentMatchId: parsedOld.currentMatchId || null,
+                                    masterDeviceId: myDeviceId,
+                                    masterPassword: "1234",
+                                    subPassword: "1234",
+                                    subDeviceIds: [],
+                                    updatedAt: Date.now()
+                                };
+                                console.log(`Migrated legacy data from ${oldKey} into room ${roomId}`);
+                                safeSaveLocal(roomId, state);
+                                break;
+                            }
+                        } catch(e){}
+                    }
+                }
+            }
+
+            if (!state) {
+                state = {
+                    roomId: roomId,
+                    matches: [],
+                    logs: [],
+                    players: defaultPlayers,
+                    currentMatchId: null,
+                    masterDeviceId: myDeviceId,
+                    masterPassword: "1234",
+                    subPassword: "1234",
+                    subDeviceIds: [],
+                    updatedAt: 0 // クラウド受信優先のため初期値0
+                };
+            }
+
+            if (state.matches && Array.isArray(state.matches)) {
+                state.matches.forEach(m => sanitizeMatch(m));
+            } else {
+                state.matches = [];
+            }
+
+            if (!state.players || !Array.isArray(state.players) || state.players.length === 0) {
+                state.players = defaultPlayers;
+            }
+
+            return state;
         }
 
         window.appState = loadLocalData(currentRoomId);
@@ -750,7 +833,7 @@
 
         async function connectRoom(roomIdToConnect) {
             window.currentRoomId = roomIdToConnect;
-            localStorage.setItem('vball_last_room', roomIdToConnect);
+            try { localStorage.setItem('vball_last_room', roomIdToConnect); } catch(e){}
             window.appState = loadLocalData(roomIdToConnect);
 
             const txtRoomId = document.getElementById('txt-room-id');
@@ -802,14 +885,21 @@
                     const remoteTime = remoteData ? (remoteData.updatedAt || 0) : 0;
                     const localTime = window.appState ? (window.appState.updatedAt || 0) : 0;
 
-                    // クラウドデータが存在し、クラウドの方が新しいか、ローカルが初期状態（0）の場合はクラウドデータを反映
+                    // クラウドデータが存在し、クラウドの方が新しいかローカルが初期値(0)の場合に更新
                     if (remoteData && (remoteTime >= localTime || localTime === 0)) {
                         window.appState = remoteData;
-                        localStorage.setItem(`vball_data_room_${window.currentRoomId}`, JSON.stringify(window.appState));
+                        if (window.appState.matches) {
+                            window.appState.matches.forEach(m => sanitizeMatch(m));
+                        }
+                        safeSaveLocal(window.currentRoomId, window.appState);
                         if (window.renderAllUI) window.renderAllUI();
+                    } else if (remoteData && localTime > remoteTime) {
+                        // オフライン中の操作などでローカルの方が新しい場合はクラウド側へ自動同期を送信
+                        pushToCloud();
                     }
                     updateSyncBadge('online');
                 } else {
+                    // クラウド上にデータが存在しない場合は現行ローカルデータを新規アップロード
                     pushToCloud();
                 }
             }, (error) => {
@@ -820,7 +910,7 @@
 
         async function pushToCloud() {
             window.appState.updatedAt = Date.now();
-            localStorage.setItem(`vball_data_room_${window.currentRoomId}`, JSON.stringify(window.appState));
+            safeSaveLocal(window.currentRoomId, window.appState);
 
             if (roomDocRef && auth && auth.currentUser) {
                 isPushing = true;
@@ -915,25 +1005,21 @@
                     <span class="team-tag my">自</span>
                 </div>
 
-                <select id="header-set-select" class="set-select-simple" onchange="onChangeCurrentSet()">
-                    <option value="1">S1</option>
-                    <option value="2">S2</option>
-                    <option value="3" selected>S3</option>
-                    <option value="4">S4</option>
-                    <option value="5">S5</option>
-                </select>
+                <div style="display:flex; align-items:center; gap:2px;">
+                    <select id="header-set-select" class="set-select-simple" onchange="onChangeCurrentSet()">
+                        <option value="1">S1</option>
+                        <option value="2">S2</option>
+                        <option value="3">S3</option>
+                        <option value="4">S4</option>
+                        <option value="5">S5</option>
+                        <option value="6">S6</option>
+                    </select>
+                    <button class="btn-header-action" onclick="addExtraSet()" title="セット追加" style="padding: 2px 5px; font-size: 0.65rem;">＋</button>
+                </div>
 
                 <button class="theme-toggle-btn" onclick="toggleTheme()" title="テーマ切替">
                     <svg class="icon-svg" id="theme-icon" viewBox="0 0 24 24">
                         <circle cx="12" cy="12" r="5"></circle>
-                        <line x1="12" y1="1" x2="12" y2="3"></line>
-                        <line x1="12" y1="21" x2="12" y2="23"></line>
-                        <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
-                        <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
-                        <line x1="1" y1="12" x2="3" y2="12"></line>
-                        <line x1="21" y1="12" x2="23" y2="12"></line>
-                        <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
-                        <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
                     </svg>
                 </button>
             </div>
@@ -950,7 +1036,7 @@
 
             <div class="match-create-box">
                 <div class="match-input-row">
-                    <input type="text" id="new-opponent" class="text-input" placeholder="対戦相手 (例: 東京第一)" />
+                    <input type="text" id="new-opponent" class="text-input" placeholder="対戦相手 (例: 静岡第一)" />
                     <button class="btn-action-small" id="btn-create-match" onclick="handleCreateMatch()">＋ このルームに試合作成</button>
                 </div>
                 <div class="match-input-row">
@@ -962,7 +1048,7 @@
             <div id="match-cards-list"></div>
         </div>
 
-        <!-- クイック選択エリア（失点・得点ボタン中心） -->
+        <!-- クイック選択エリア -->
         <div class="card-section">
             <div class="quick-section">
                 <div class="section-title" style="margin-bottom:0;">
@@ -976,7 +1062,7 @@
             </div>
         </div>
 
-        <!-- 選手選択（3列四角枠 ＋ 長押し並び替え機能付き） -->
+        <!-- 選手選択 -->
         <div class="card-section">
             <div class="section-title">
                 <span>2. 選手を選択 (任意 / 長押しで並び替え)</span>
@@ -1015,30 +1101,23 @@
         </div>
     </div>
 
-    <!-- 3. タブ2: 集計画面 (ランキング＋集計) -->
+    <!-- 3. タブ2: 集計画面 -->
     <div id="tab2-view" style="display: none;">
-        <!-- ランキング表 -->
         <div class="card-section">
-            <div class="section-title">
-                <span>カテゴリー別 選手ランキング</span>
-            </div>
+            <div class="section-title">カテゴリー別 選手ランキング</div>
             <div class="ranking-grid">
-                <!-- アタック王 -->
                 <div class="ranking-card">
                     <div class="ranking-card-title">🏐 アタック得点王</div>
                     <div id="rk-spike-body"></div>
                 </div>
-                <!-- ブロック王 -->
                 <div class="ranking-card">
                     <div class="ranking-card-title">🛡️ ブロック得点王</div>
                     <div id="rk-block-body"></div>
                 </div>
-                <!-- エース王 -->
                 <div class="ranking-card">
                     <div class="ranking-card-title">⚡ サービスエース王</div>
                     <div id="rk-serve-body"></div>
                 </div>
-                <!-- レシーブ王 -->
                 <div class="ranking-card">
                     <div class="ranking-card-title">🤲 ディグ・カット王</div>
                     <div id="rk-dig-body"></div>
@@ -1046,18 +1125,10 @@
             </div>
         </div>
 
-        <!-- チーム集計 -->
         <div class="card-section">
             <div class="section-title">
                 <span>チーム集計</span>
-                <div class="set-tabs">
-                    <button class="set-tab-btn active" onclick="filterStats('ALL', this)">全体</button>
-                    <button class="set-tab-btn" onclick="filterStats('1', this)">S1</button>
-                    <button class="set-tab-btn" onclick="filterStats('2', this)">S2</button>
-                    <button class="set-tab-btn" onclick="filterStats('3', this)">S3</button>
-                    <button class="set-tab-btn" onclick="filterStats('4', this)">S4</button>
-                    <button class="set-tab-btn" onclick="filterStats('5', this)">S5</button>
-                </div>
+                <div class="set-tabs" id="stats-set-tabs-container"></div>
             </div>
 
             <div class="stats-grid-container">
@@ -1098,11 +1169,8 @@
             </div>
         </div>
 
-        <!-- 全選手個人票一覧 -->
         <div class="card-section">
-            <div class="section-title">
-                <span>全選手個人票 (確率・成績パラメータ一覧)</span>
-            </div>
+            <div class="section-title">全選手個人票 (確率・成績一覧)</div>
             <div class="table-responsive">
                 <table class="data-table">
                     <thead>
@@ -1154,6 +1222,8 @@
             <div class="log-container" id="log-list">記録はありません</div>
             
             <button class="btn-export" onclick="exportCSV()">📄 最終得点つきCSV出力 (クロス集計表含む)</button>
+            <button class="btn-export" style="background-color: var(--purple); margin-top:6px;" onclick="exportJSONBackup()">📦 全データJSONバックアップ保存 (完全保存)</button>
+            <button class="btn-export" style="background-color: var(--success); margin-top:6px;" onclick="openJSONImportModal()">📥 JSONバックアップファイルから復元</button>
             
             <div style="margin-top:12px; background:var(--bg-card); border:1px solid var(--border); padding:10px; border-radius:6px; font-size:0.75rem;">
                 <div style="font-weight:bold; margin-bottom:6px;">マスター端末コントロール</div>
@@ -1190,6 +1260,22 @@
             </div>
             <div id="quick-config-forms"></div>
             <button class="btn-export" style="margin-top:10px;" onclick="saveQuickConfig()">保存</button>
+        </div>
+    </div>
+
+    <!-- JSON復元モーダル -->
+    <div class="modal-bg" id="json-import-modal">
+        <div class="modal-box">
+            <div class="section-title">
+                <span>📥 JSONバックアップの復元</span>
+                <button class="btn-delete-small" onclick="closeJSONImportModal()">✕</button>
+            </div>
+            <div style="font-size:0.73rem; color:var(--text-muted); margin:6px 0;">
+                保存した `.json` ファイルを選択するか、テキストデータを下に貼り付けて復元してください。
+            </div>
+            <input type="file" id="json-file-input" accept=".json" class="text-input" style="width:100%; margin-bottom:8px;" onchange="handleJSONFileSelect(event)" />
+            <textarea id="json-import-textarea" class="text-input" style="width:100%; height:80px; font-size:0.7rem;" placeholder="ここにJSONを貼り付け"></textarea>
+            <button class="btn-export" style="margin-top:8px;" onclick="executeJSONImport()">復元を実行</button>
         </div>
     </div>
 
@@ -1232,7 +1318,7 @@
         </div>
     </div>
 
-    <!-- カスタム通知・確認ダイアログ (alert/confirm完全排除) -->
+    <!-- カスタム通知・確認ダイアログ -->
     <div class="modal-bg" id="custom-dialog-modal" style="z-index: 4000;">
         <div class="modal-box" style="max-width: 380px; text-align: center;">
             <div id="custom-dialog-message" style="margin-bottom: 14px; font-size: 0.85rem; font-weight: 600; line-height: 1.4;"></div>
@@ -1252,7 +1338,6 @@
         const KEY_QUICK_CONFIG = "vball_quick_config_device_v5";
         const KEY_PLAYER_ORDER = "vball_player_order_device_v2";
 
-        /* 得点・失点操作を主軸としたシンプルなデフォルトボタン構成 */
         const DEFAULT_QUICK_CONFIG = [
             { label: '相手失点 (自+1)', player: '指定なし', category: '相手失点', action: '相手ミス', cls: 'type-opp-miss' },
             { label: '自失点 (相手+1)', player: '指定なし', category: '相手得点', action: '失点', cls: 'type-miss' },
@@ -1307,10 +1392,9 @@
         }
 
         function saveDevicePlayerOrder(orderArr) {
-            localStorage.setItem(KEY_PLAYER_ORDER, JSON.stringify(orderArr));
+            try { localStorage.setItem(KEY_PLAYER_ORDER, JSON.stringify(orderArr)); } catch(e){}
         }
 
-        /* プレー毎の選択オプション（スコア自動加算の対応注記つき） */
         const RESULT_MAP = {
             'スパイク': [
                 { label: '成功 (決定)', note: '自チーム +1点', val: '成功', cls: 'btn-success' },
@@ -1357,6 +1441,9 @@
             }
 
             const currentMatch = matches.find(m => m.id === state.currentMatchId);
+            if (currentMatch && window.sanitizeMatch) {
+                window.sanitizeMatch(currentMatch);
+            }
 
             updateHeaderInfo(currentMatch);
             renderMatchCardsList(matches, state.currentMatchId);
@@ -1386,11 +1473,52 @@
                 return;
             }
 
+            if (window.sanitizeMatch) window.sanitizeMatch(match);
+            const setIdx = (match.currentSet || 1) - 1;
+            const currentSetScore = (match.setScores && match.setScores[setIdx]) ? match.setScores[setIdx] : { my: match.myScore || 0, opp: match.oppScore || 0 };
+
             if (dateEl) dateEl.innerText = match.date || '';
             if (oppTag) oppTag.innerText = match.opponent || '相手';
-            if (myScoreEl) myScoreEl.innerText = match.myScore || 0;
-            if (oppScoreEl) oppScoreEl.innerText = match.oppScore || 0;
-            if (setSel) setSel.value = match.currentSet || 1;
+            if (myScoreEl) myScoreEl.innerText = currentSetScore.my || 0;
+            if (oppScoreEl) oppScoreEl.innerText = currentSetScore.opp || 0;
+
+            if (setSel) {
+                setSel.innerHTML = '';
+                const maxS = match.maxSets || 6;
+                for (let i = 1; i <= maxS; i++) {
+                    const opt = document.createElement('option');
+                    opt.value = i;
+                    opt.innerText = `S${i}`;
+                    if (i === match.currentSet) opt.selected = true;
+                    setSel.appendChild(opt);
+                }
+            }
+
+            const statsTabs = document.getElementById('stats-set-tabs-container');
+            if (statsTabs) {
+                let html = `<button class="set-tab-btn ${currentStatsSet === 'ALL' ? 'active' : ''}" onclick="filterStats('ALL', this)">全体</button>`;
+                const maxS = match.maxSets || 6;
+                for (let i = 1; i <= maxS; i++) {
+                    html += `<button class="set-tab-btn ${currentStatsSet === String(i) ? 'active' : ''}" onclick="filterStats('${i}', this)">S${i}</button>`;
+                }
+                statsTabs.innerHTML = html;
+            }
+        }
+
+        function addExtraSet() {
+            const state = window.appState;
+            if (!state.currentMatchId) return;
+
+            const match = state.matches.find(m => m.id === state.currentMatchId);
+            if (!match) return;
+
+            if (window.sanitizeMatch) window.sanitizeMatch(match);
+            match.maxSets += 1;
+            match.setScores.push({ my: 0, opp: 0 });
+            match.currentSet = match.maxSets;
+
+            commitState();
+            showCustomAlert(`第 ${match.maxSets} セットを追加しました。`);
         }
 
         function renderMatchCardsList(matches, currentMatchId) {
@@ -1404,10 +1532,20 @@
             }
 
             matches.forEach(m => {
+                if (window.sanitizeMatch) window.sanitizeMatch(m);
                 const isSelected = (m.id === currentMatchId);
                 const card = document.createElement('div');
                 card.className = `match-card ${isSelected ? 'selected-match' : ''}`;
                 
+                let setScoresSummary = '';
+                if (m.setScores && Array.isArray(m.setScores)) {
+                    m.setScores.forEach((s, idx) => {
+                        if (s.my > 0 || s.opp > 0 || idx < m.currentSet) {
+                            setScoresSummary += `[S${idx+1}] ${s.my}-${s.opp} `;
+                        }
+                    });
+                }
+
                 card.innerHTML = `
                     <div style="display:flex; justify-content:space-between; align-items:flex-start;">
                         <div>
@@ -1417,7 +1555,7 @@
                         ${window.isMaster() ? `<button class="btn-delete-small" onclick="handleDeleteMatch('${m.id}', event)">削除</button>` : ''}
                     </div>
                     <div class="match-scores-history">
-                        第${m.currentSet || 1}セット: 自 <span style="font-weight:bold; color:var(--primary);">${m.myScore || 0}</span> - <span style="font-weight:bold; color:var(--danger);">${m.oppScore || 0}</span> 相手
+                        現在: S${m.currentSet} | ${setScoresSummary || `自 ${m.myScore || 0} - ${m.oppScore || 0} 相手`}
                     </div>
                 `;
 
@@ -1531,10 +1669,15 @@
             const match = state.matches.find(m => m.id === state.currentMatchId);
             if (!match) return;
 
+            if (window.sanitizeMatch) window.sanitizeMatch(match);
+            const setIdx = (match.currentSet || 1) - 1;
+
             if (team === 'my') {
-                match.myScore = Math.max(0, (match.myScore || 0) + val);
+                match.setScores[setIdx].my = Math.max(0, (match.setScores[setIdx].my || 0) + val);
+                match.myScore = match.setScores[setIdx].my;
             } else {
-                match.oppScore = Math.max(0, (match.oppScore || 0) + val);
+                match.setScores[setIdx].opp = Math.max(0, (match.setScores[setIdx].opp || 0) + val);
+                match.oppScore = match.setScores[setIdx].opp;
             }
 
             commitState();
@@ -1552,13 +1695,19 @@
             const match = state.matches.find(m => m.id === state.currentMatchId);
             if (!match) return;
 
-            match.currentSet = parseInt(document.getElementById('header-set-select').value);
+            if (window.sanitizeMatch) window.sanitizeMatch(match);
+            match.currentSet = parseInt(document.getElementById('header-set-select').value, 10);
+            
+            const curr = match.setScores[match.currentSet - 1] || { my: 0, opp: 0 };
+            match.myScore = curr.my;
+            match.oppScore = curr.opp;
+
             commitState();
         }
 
         function handleCreateMatch() {
             if (!window.isMaster()) {
-                showCustomAlert("試合作成は【マスター端末】からのみ行えます。ヘッダーの「権限」バッジを押してパスワードを入力してください。");
+                showCustomAlert("試合作成は【マスター端末】からのみ行えます。");
                 return;
             }
 
@@ -1576,13 +1725,20 @@
             const dateStr = dateInput.value || now.toISOString().split('T')[0];
             const timeStr = timeInput.value || now.toTimeString().slice(0, 5);
 
+            const initialSetScores = [];
+            for (let i = 0; i < 6; i++) {
+                initialSetScores.push({ my: 0, opp: 0 });
+            }
+
             const newMatch = {
                 id: `match_${Date.now()}`,
                 opponent: oppName,
                 date: `${dateStr} ${timeStr}`,
+                maxSets: 6,
                 currentSet: 1,
                 myScore: 0,
-                oppScore: 0
+                oppScore: 0,
+                setScores: initialSetScores
             };
 
             window.appState.matches.unshift(newMatch);
@@ -1773,41 +1929,43 @@
             document.getElementById('result-buttons-area').style.display = 'none';
         }
 
-        /* アクション結果とスコアの厳密な自動連動処理 */
         function saveDirectLog(player, category, action) {
             const state = window.appState;
             if (!state.currentMatchId) return;
 
             const match = state.matches.find(m => m.id === state.currentMatchId);
-            const currentSetNum = match ? (match.currentSet || 1) : 1;
+            if (!match) return;
+
+            if (window.sanitizeMatch) window.sanitizeMatch(match);
+            const currentSetNum = match.currentSet || 1;
+            const setIdx = currentSetNum - 1;
 
             const now = new Date();
             const timeStr = now.toLocaleTimeString('ja-JP', { hour: '2-digit', minute: '2-digit' });
 
             let scoreAddedType = null;
-            if (match) {
-                // 自チーム加点条件: 相手失点 or 成功(スパイク/ブロック/サーブ) or 決定 or エース or 相手ミス
-                const isPointGain = (
-                    category === '相手失点' ||
-                    action === '成功' ||
-                    action === '決定' ||
-                    action === 'エース' ||
-                    action === '相手ミス'
-                );
+            
+            const isPointGain = (
+                category === '相手失点' ||
+                action === '成功' ||
+                action === '決定' ||
+                action === 'エース' ||
+                action === '相手ミス'
+            );
 
-                // 相手チーム加点条件: 相手得点 or (各攻撃/守備での「失点」)
-                const isOppGain = (
-                    category === '相手得点' ||
-                    (action === '失点' && category !== '相手失点')
-                );
+            const isOppGain = (
+                category === '相手得点' ||
+                (action === '失点' && category !== '相手失点')
+            );
 
-                if (isPointGain && category !== '相手得点') {
-                    match.myScore = (match.myScore || 0) + 1;
-                    scoreAddedType = 'my';
-                } else if (isOppGain) {
-                    match.oppScore = (match.oppScore || 0) + 1;
-                    scoreAddedType = 'opp';
-                }
+            if (isPointGain && category !== '相手得点') {
+                match.setScores[setIdx].my = (match.setScores[setIdx].my || 0) + 1;
+                match.myScore = match.setScores[setIdx].my;
+                scoreAddedType = 'my';
+            } else if (isOppGain) {
+                match.setScores[setIdx].opp = (match.setScores[setIdx].opp || 0) + 1;
+                match.oppScore = match.setScores[setIdx].opp;
+                scoreAddedType = 'opp';
             }
 
             const log = {
@@ -1824,7 +1982,7 @@
             state.logs.unshift(log);
             lastLogId = log.id;
 
-            document.getElementById('undo-text').innerText = `${player} / ${category} [${action}]`;
+            document.getElementById('undo-text').innerText = `[S${currentSetNum}] ${player} / ${category} [${action}]`;
             document.getElementById('toast-undo').style.display = 'flex';
 
             commitState();
@@ -1844,8 +2002,18 @@
             if (targetLog && targetLog.scoreAddedType && state.currentMatchId) {
                 const match = state.matches.find(m => m.id === state.currentMatchId);
                 if (match) {
-                    if (targetLog.scoreAddedType === 'my') match.myScore = Math.max(0, (match.myScore || 0) - 1);
-                    if (targetLog.scoreAddedType === 'opp') match.oppScore = Math.max(0, (match.oppScore || 0) - 1);
+                    if (window.sanitizeMatch) window.sanitizeMatch(match);
+                    const setIdx = (targetLog.set || 1) - 1;
+                    if (match.setScores && match.setScores[setIdx]) {
+                        if (targetLog.scoreAddedType === 'my') {
+                            match.setScores[setIdx].my = Math.max(0, (match.setScores[setIdx].my || 0) - 1);
+                            if (setIdx === match.currentSet - 1) match.myScore = match.setScores[setIdx].my;
+                        }
+                        if (targetLog.scoreAddedType === 'opp') {
+                            match.setScores[setIdx].opp = Math.max(0, (match.setScores[setIdx].opp || 0) - 1);
+                            if (setIdx === match.currentSet - 1) match.oppScore = match.setScores[setIdx].opp;
+                        }
+                    }
                 }
             }
 
@@ -2160,7 +2328,7 @@
         }
 
         function onSelectEditLogId() {
-            const targetId = parseInt(document.getElementById('edit-log-id-select').value);
+            const targetId = parseInt(document.getElementById('edit-log-id-select').value, 10);
             const log = (window.appState.logs || []).find(l => l.id === targetId);
             if (!log) return;
 
@@ -2174,7 +2342,7 @@
         }
 
         function saveEditedLog() {
-            const targetId = parseInt(document.getElementById('edit-log-id-select').value);
+            const targetId = parseInt(document.getElementById('edit-log-id-select').value, 10);
             const log = (window.appState.logs || []).find(l => l.id === targetId);
             if (!log) return;
 
@@ -2361,7 +2529,7 @@
                     <div style="display:flex; gap:4px; margin-bottom:4px;">
                         <input type="text" class="text-input" id="q-label-${idx}" value="${item.label}" placeholder="表示名" />
                         <select class="text-input" id="q-cls-${idx}">
-                            <option value="type-opp-miss" ${item.cls==='type-opp-miss'?'selected':''}>緑/エメラルド (相手失点=自加点)</option>
+                            <option value="type-opp-miss" ${item.cls==='type-opp-miss'?'selected':''}>緑 (相手失点=自加点)</option>
                             <option value="type-miss" ${item.cls==='type-miss'?'selected':''}>赤 (自失点=相手加点)</option>
                             <option value="type-success" ${item.cls==='type-success'?'selected':''}>青 (アタック/エース自加点)</option>
                             <option value="type-info" ${item.cls==='type-info'?'selected':''}>水色 (効果/継続)</option>
@@ -2405,12 +2573,11 @@
                 newConfig.push({ label, player: '指定なし', category, action, cls });
             }
 
-            localStorage.setItem(KEY_QUICK_CONFIG, JSON.stringify(newConfig));
+            try { localStorage.setItem(KEY_QUICK_CONFIG, JSON.stringify(newConfig)); } catch(e){}
             closeQuickConfigModal();
             renderQuickButtons();
         }
 
-        /* 確実なフル共有URLコピー処理 */
         async function copyShareUrl() {
             if (window.pushToCloud) {
                 await window.pushToCloud();
@@ -2433,7 +2600,7 @@
             }
 
             if (copySuccess) {
-                showCustomAlert(`【共有URLをクリップボードにコピーしました】\n\nルーム番号: ${currentRoom}\nこのURLを他の端末で開くとリアルタイム同期されます。`);
+                showCustomAlert(`【共有URLをコピーしました】\n\nルーム番号: ${currentRoom}\nこのURLを他の端末で開くとリアルタイム同期されます。`);
             } else {
                 const modal = document.getElementById('custom-dialog-modal');
                 const msgEl = document.getElementById('custom-dialog-message');
@@ -2450,11 +2617,71 @@
             }
         }
 
+        /* JSON バックアップのダウンロード出力 */
+        function exportJSONBackup() {
+            const dataStr = JSON.stringify(window.appState, null, 2);
+            const blob = new Blob([dataStr], { type: 'application/json' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = `vball_backup_room${window.currentRoomId}_${new Date().toISOString().slice(0,10)}.json`;
+            a.click();
+            URL.revokeObjectURL(url);
+            showCustomAlert("全データのJSONバックアップファイルを出力しました。");
+        }
+
+        /* JSON バックアップの取り込みモーダル */
+        function openJSONImportModal() {
+            document.getElementById('json-import-modal').style.display = 'flex';
+        }
+
+        function closeJSONImportModal() {
+            document.getElementById('json-import-modal').style.display = 'none';
+        }
+
+        function handleJSONFileSelect(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                document.getElementById('json-import-textarea').value = e.target.result;
+            };
+            reader.readAsText(file);
+        }
+
+        function executeJSONImport() {
+            const content = document.getElementById('json-import-textarea').value.trim();
+            if (!content) {
+                showCustomAlert("復元するJSONデータを入力またはファイル選択してください。");
+                return;
+            }
+
+            try {
+                const parsed = JSON.parse(content);
+                if (parsed && (parsed.matches || parsed.logs || parsed.players)) {
+                    showCustomConfirm("現在のデータを上書きしてバックアップから復元しますか？", () => {
+                        window.appState = parsed;
+                        if (window.appState.matches) {
+                            window.appState.matches.forEach(m => sanitizeMatch(m));
+                        }
+                        closeJSONImportModal();
+                        commitState();
+                        showCustomAlert("データバックアップから正常に復元されました！");
+                    });
+                } else {
+                    showCustomAlert("有効なバレーボールデータ構造ではありません。");
+                }
+            } catch (err) {
+                showCustomAlert("JSONデータの解析に失敗しました。ファイルの内容を確認してください。");
+            }
+        }
+
         function toggleTheme() {
             const currentTheme = document.documentElement.getAttribute('data-theme') || 'dark';
             const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
             document.documentElement.setAttribute('data-theme', newTheme);
-            localStorage.setItem(KEY_THEME, newTheme);
+            try { localStorage.setItem(KEY_THEME, newTheme); } catch(e){}
             updateThemeIcon(newTheme);
         }
 
@@ -2494,15 +2721,24 @@
             const matches = window.appState.matches || [];
             const match = matches.find(m => m.id === window.appState.currentMatchId);
             const oppName = match ? match.opponent : '試合データ';
-            const finalMy = match ? (match.myScore || 0) : 0;
-            const finalOpp = match ? (match.oppScore || 0) : 0;
             const setNum = match ? (match.currentSet || 1) : 1;
 
             let csv = `【試合概要】\n`;
             csv += `ルーム番号,Rm ${window.currentRoomId}\n`;
             csv += `対戦相手,vs ${oppName}\n`;
             csv += `最終セット,第${setNum}セット\n`;
-            csv += `最終スコア,自チーム ${finalMy} - ${finalOpp} 相手チーム\n\n`;
+
+            if (match && match.setScores) {
+                let summaryScores = '';
+                match.setScores.forEach((s, idx) => {
+                    if (s.my > 0 || s.opp > 0 || idx < match.currentSet) {
+                        summaryScores += ` [S${idx+1}] 自 ${s.my}-${s.opp} 相手`;
+                    }
+                });
+                csv += `セットスコア内訳,${summaryScores}\n\n`;
+            } else {
+                csv += `最終スコア,自チーム ${match ? match.myScore : 0} - ${match ? match.oppScore : 0} 相手チーム\n\n`;
+            }
 
             csv += `【選手別クロス集計マトリックス】\n`;
             csv += `選手名,スパイク成功,スパイク効果,スパイク失点,スパイク決定率,ブロック成功,ブロック効果,ブロック失点,サーブ成功,サーブ効果,サーブ失点,ディグA,ディグB,ディグC,カットA,カットB,カットC\n`;
@@ -2588,6 +2824,7 @@
 
         window.updateScore = updateScore;
         window.onChangeCurrentSet = onChangeCurrentSet;
+        window.addExtraSet = addExtraSet;
         window.handleCreateMatch = handleCreateMatch;
         window.handleSelectMatch = handleSelectMatch;
         window.handleDeleteMatch = handleDeleteMatch;
@@ -2603,6 +2840,11 @@
         window.toggleTheme = toggleTheme;
         window.switchTab = switchTab;
         window.exportCSV = exportCSV;
+        window.exportJSONBackup = exportJSONBackup;
+        window.openJSONImportModal = openJSONImportModal;
+        window.closeJSONImportModal = closeJSONImportModal;
+        window.handleJSONFileSelect = handleJSONFileSelect;
+        window.executeJSONImport = executeJSONImport;
         window.resetAllData = resetAllData;
         window.openQuickConfigModal = openQuickConfigModal;
         window.closeQuickConfigModal = closeQuickConfigModal;
